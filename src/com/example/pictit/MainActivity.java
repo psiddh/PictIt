@@ -1,6 +1,7 @@
 package com.example.pictit;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 import android.media.ExifInterface;
 import android.net.Uri;
@@ -10,6 +11,7 @@ import android.os.Handler;
 import android.provider.MediaStore;
 import android.app.ActionBar.LayoutParams;
 import android.app.Activity;
+import android.app.SearchManager;
 import android.app.LoaderManager.LoaderCallbacks;
 import android.app.ProgressDialog;
 import android.content.CursorLoader;
@@ -19,19 +21,23 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
+import android.speech.RecognizerIntent;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 
 public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
 
     private static final int PROGRESS = 0x1;
-
+    private static final int VOICE_RECOGNITION_REQUEST_CODE = 1001;
     private ProgressBar mProgress;
     private ProgressDialog progDialog;
     private int mProgressStatus = 0;
@@ -53,10 +59,7 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
         button.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 // Perform action on click
-            	Intent intent = new Intent(getBaseContext(), DisplayViewsExample.class);
-
-                //intent.putExtra(EXTRA_MESSAGE, message);
-                startActivity(intent);
+            	speak();
             }
         });
         getLoaderManager().initLoader(0, null, this);
@@ -113,6 +116,11 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
         return true;
     }
     
+    void showGridView(String filter) {
+    	Intent intent = new Intent(getBaseContext(), DisplayViewsExample.class);
+    	intent.putExtra("filter", filter);
+        startActivity(intent);
+    }
     void createProgressBar() {
     	/*mProgress = (ProgressBar) findViewById(R.id.progressBar1);
     	//mImgView = (ImageView) findViewById(R.id.imageView1);
@@ -176,6 +184,87 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
        	}
     }
     
+    public void speak() {
+		  Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+		 
+		  // Specify the calling package to identify your application
+		  intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getClass()
+		    .getPackage().getName());
+		 
+		  // Display an hint to the user about what he should say.
+		  //intent.putExtra(RecognizerIntent.EXTRA_PROMPT, metTextHint.getText()
+		//.toString());
+		 
+		  // Given an hint to the recognizer about what the user is going to say
+		  //There are two form of language model available
+		  //1.LANGUAGE_MODEL_WEB_SEARCH : For short phrases
+		  //2.LANGUAGE_MODEL_FREE_FORM  : If not sure about the words or phrases and its domain.
+		intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+		    RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH);
+    	
+  	  //Start the Voice recognizer activity for the result.
+  	  startActivityForResult(intent, VOICE_RECOGNITION_REQUEST_CODE);
+ 
+    }
+    
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+   	 ArrayList<String> textMatchList = null;
+     if (requestCode == VOICE_RECOGNITION_REQUEST_CODE)
+    
+      //If Voice recognition is successful then it returns RESULT_OK
+      if(resultCode == RESULT_OK) {
+    
+       textMatchList = data
+       .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+       
+       //Bundle extras = data.getExtras();
+       int SearchState = data.getIntExtra("SearchState", 0);           
+       if (!textMatchList.isEmpty()) {
+        // If first Match contains the 'search' word
+        // Then start web search.
+        if (textMatchList.get(0).contains("search")) {
+    
+           String searchQuery = textMatchList.get(0);
+                                              searchQuery = searchQuery.replace("search","");
+           Intent search = new Intent(Intent.ACTION_WEB_SEARCH);
+           search.putExtra(SearchManager.QUERY, searchQuery);
+           startActivity(search);
+        } else {
+       	 String searchQuery = textMatchList.get(0);
+       	 showToastMessage("Command :  " + searchQuery);
+       	showGridView(searchQuery);
+        }
+       }
+      //Result code for various error.
+      }else if(resultCode == RecognizerIntent.RESULT_AUDIO_ERROR){
+       showToastMessage("Audio Error");
+      }else if(resultCode == RecognizerIntent.RESULT_CLIENT_ERROR){
+       showToastMessage("Client Error");
+      }else if(resultCode == RecognizerIntent.RESULT_NETWORK_ERROR){
+       showToastMessage("Network Error");
+      }else if(resultCode == RecognizerIntent.RESULT_NO_MATCH){
+       showToastMessage("No Match");
+      }else if(resultCode == RecognizerIntent.RESULT_SERVER_ERROR){
+       showToastMessage("Server Error");
+      }
+     super.onActivityResult(requestCode, resultCode, data);
+
+     
+     Intent resultIntent = new Intent();
+     resultIntent.putExtra(RecognizerIntent.EXTRA_RESULTS, textMatchList);
+     //TODO Add extras or a data URI to this intent as appropriate.
+     setResult(Activity.RESULT_OK, resultIntent);
+     //CameraMainActivity.this.onActivityResult(requestCode, resultCode, data);
+    }
+    
+    /**
+     * Helper method to show the toast message
+     **/
+     void showToastMessage(String message){
+      Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+     }
+     
     int doWork() {
     	try {
 			Thread.sleep(1000);

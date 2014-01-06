@@ -1,11 +1,14 @@
 package com.example.pictit;
  
 import java.io.IOException;
+import java.util.Calendar;
 
+import android.R.color;
 import android.app.Activity;
 import android.app.LoaderManager.LoaderCallbacks;
 import android.content.Context;
 import android.content.CursorLoader;
+import android.content.Intent;
 import android.content.Loader;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -39,6 +42,10 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
     int dataColumn = 0;
     private GridView mgridView;
     private int mGridCount = 0;
+    Calendar mCalendar = Calendar.getInstance();
+    String[] mMonthNames = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
+    
+    String mUserFilter;
     
     @Override    
     public void onCreate(Bundle savedInstanceState) 
@@ -46,8 +53,15 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
         super.onCreate(savedInstanceState);
         setContentView(R.layout.displaygridview);
         getLoaderManager().initLoader(0, null, this);
+        
+        Intent intent = getIntent();
+        String filter = intent.getExtras().getString("filter");
+        mUserFilter = filter;
  
         mgridView = (GridView) findViewById(R.id.gridview); 
+        mgridView.setBackgroundColor(color.darker_gray);
+        mgridView.setVerticalSpacing(1);
+        mgridView.setHorizontalSpacing(1);
         mgridView.setOnItemClickListener(new OnItemClickListener() 
         {
             public void onItemClick(AdapterView parent, 
@@ -143,7 +157,9 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                 imageView.setScaleType(ImageView.ScaleType.FIT_XY);
                 imageView.setPadding(5, 5, 5, 5);
                 //imageView.setImageDrawable(getNextPic());
-                imageView.setImageBitmap(getNextPic());
+                Bitmap bmp = getNextPic();
+                if (bmp != null)
+                  imageView.setImageBitmap(bmp);
             } else {
                 imageView = (ImageView) convertView;
             }
@@ -184,6 +200,12 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
             // Do something with the values.
             Log.i("ListingImages", " bucket=" + bucket 
                    + "  date_taken=" + date + "title = " + title + "data = " + data);
+            long dateinMilliSec = Long.parseLong(date);
+            mCalendar.setTimeInMillis(dateinMilliSec);
+            int monthOfYear = mCalendar.get(Calendar.MONTH);
+            if (monthOfYear >= 0 && monthOfYear <= 11 ) {
+            	//if(!mUserFilter.contains(mMonthNames[monthOfYear])) return null;
+            }
             return data;
         }
         
@@ -197,6 +219,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
             	
             	try {
             		data = getCurrentImgPath();
+            		if (null == data) return null;
         			intf = new ExifInterface(data);
             	} catch(IOException e) {
             	    e.printStackTrace();
