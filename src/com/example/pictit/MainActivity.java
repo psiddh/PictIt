@@ -8,17 +8,24 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.provider.MediaStore;
+import android.app.ActionBar.LayoutParams;
 import android.app.Activity;
 import android.app.LoaderManager.LoaderCallbacks;
 import android.app.ProgressDialog;
 import android.content.CursorLoader;
+import android.content.Intent;
 import android.content.Loader;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
 import android.util.Log;
 import android.view.Menu;
+import android.view.View;
+import android.widget.Button;
+import android.widget.GridView;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 
 public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
@@ -29,6 +36,7 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
     private ProgressDialog progDialog;
     private int mProgressStatus = 0;
     private ImageView mImgView;
+    private LinearLayout mLinearLayout;
     private int LIST_ID = 1001;
 
     private Handler mHandler = new Handler();
@@ -38,8 +46,19 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         //testPath();
-        createProgressBar();
+    	//mLinearLayout = (LinearLayout) findViewById(R.id.linear1);
+        //createProgressBar();
         //enumeratePics();
+        final Button button = (Button) findViewById(R.id.button1);
+        button.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                // Perform action on click
+            	Intent intent = new Intent(getBaseContext(), DisplayViewsExample.class);
+
+                //intent.putExtra(EXTRA_MESSAGE, message);
+                startActivity(intent);
+            }
+        });
         getLoaderManager().initLoader(0, null, this);
     }
 
@@ -75,13 +94,12 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
 
             //data.moveToFirst();
             //imagePath = data.getString(columnIndex);
-            enumeratePics(data);
+            //enumeratePics(data);
         } else {
             //imagePath = imageUri.getPath();
         }
 
-        //setupImageView();
-    	
+        //setupImageView();    	
     }
     
     @Override
@@ -96,8 +114,8 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
     }
     
     void createProgressBar() {
-    	mProgress = (ProgressBar) findViewById(R.id.progressBar1);
-    	mImgView = (ImageView) findViewById(R.id.imageView1);
+    	/*mProgress = (ProgressBar) findViewById(R.id.progressBar1);
+    	//mImgView = (ImageView) findViewById(R.id.imageView1);
         progDialog = new ProgressDialog(this);
         progDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         //progDialog.setMax(maxBarValue);
@@ -118,7 +136,7 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
                     });
                 }
             }
-        }).start();
+        }).start();*/
     }
     
     void testPath(String path) {
@@ -141,8 +159,20 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
        	
        	if (intf.hasThumbnail()) {
        		byte[] thumbnail = intf.getThumbnail();
+       		LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
        		Bitmap bmpImg = BitmapFactory.decodeByteArray(thumbnail, 0, thumbnail.length);
-       		mImgView.setImageBitmap(bmpImg);
+       		BitmapDrawable bmd = new BitmapDrawable(getResources(),bmpImg);
+       	    ImageView imageView = new ImageView(this);
+            imageView.setPadding(2, 0, 5, 5);
+            imageView.setScaleType(ImageView.ScaleType.FIT_XY);
+            //imageView.setLayoutParams(new Gallery.LayoutParams(150, 120));
+            imageView.setLayoutParams(layoutParams);
+            imageView.setImageDrawable(bmd);
+       		//mImgView.setPadding(2, 0, 9, 5);
+       		//mImgView.setImageDrawable(bmd);
+       		//mImgView.setImageBitmap(bmpImg);
+            
+          //mLinearLayout.addView(imageView);
        	}
     }
     
@@ -192,7 +222,7 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
                 // Do something with the values.
                 Log.i("ListingImages", " bucket=" + bucket 
                        + "  date_taken=" + date + "title = " + title + "data = " + data);
-                if (bucket.equals("Camera"))
+                //if (!bucket.equals("Camera"))
                   testPath(data);
             } while (cur.moveToNext());
 
