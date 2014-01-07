@@ -1,7 +1,10 @@
 package com.example.pictit;
  
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
 
 import android.R.color;
 import android.app.Activity;
@@ -40,12 +43,16 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
     int titleColumn = 0;
         
     int dataColumn = 0;
+    int mCurrIndex = 0;
     private GridView mgridView;
     private int mGridCount = 0;
     Calendar mCalendar = Calendar.getInstance();
     String[] mMonthNames = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
     
     String mUserFilter;
+    
+    //Map<String, String> mMap = new HashMap<String, String>();
+    ArrayList<String> mList = new ArrayList<String>();
     
     @Override    
     public void onCreate(Bundle savedInstanceState) 
@@ -71,7 +78,8 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                         "pic" + (position + 1) + " selected", 
                         Toast.LENGTH_SHORT).show();
             }
-        });        
+        });
+        
     }
  
     @Override
@@ -107,7 +115,6 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
         } else {
             //imagePath = imageUri.getPath();
         }
-    	
         //setupImageView();    	
     }
     
@@ -132,11 +139,12 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
             context = c;
             cur = data;
             setupCursor();
+            performQueryUsingUserFilter();
         }
  
         //---returns the number of images---
         public int getCount() {
-            return cur.getCount();
+            return mList.size() - 1;
         }
  
         public Object getItem(int position) {
@@ -185,7 +193,61 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
             } 
         }
         
-        String getCurrentImgPath() {
+        void performQueryUsingUserFilter() {
+        	
+        	do {
+	        	String date = cur.getString(dateColumn);
+	        	String path = cur.getString(dataColumn);
+	        	
+	        	long dateinMilliSec = Long.parseLong(date);
+	            mCalendar.setTimeInMillis(dateinMilliSec);
+	            int monthOfYear = mCalendar.get(Calendar.MONTH);
+	            if (monthOfYear >= 0 && monthOfYear <= 11 ) {
+	            	if(mUserFilter.contains(mMonthNames[monthOfYear])) {
+	            		mList.add(path);
+	            		//mMap.put(path, mMonthNames[monthOfYear]);
+	            	} else
+	            		Log.i("monthOfYear  : "," mMonthNames[monthOfYear]");
+	            }
+        	} while (cur.moveToNext());
+        }
+        
+        Bitmap getNextPic() {
+        	if ( mCurrIndex < mList.size() ) {
+        		String path = mList.get(mCurrIndex);
+        		mCurrIndex++;
+        		
+        		do {
+                    ExifInterface intf = null;
+                    //String data = null;
+                	
+                	try {
+            			intf = new ExifInterface(path);
+                	} catch(IOException e) {
+                	    e.printStackTrace();
+                	}
+
+                	if(intf == null) {
+                	    //File doesn't exist or isn't an image 
+                	}
+                   
+                	String dateString = intf.getAttribute(ExifInterface.TAG_DATETIME);
+                   	//Log.d("PATH : ", data);
+                   	Log.d("dateString : ", dateString);
+                	if (intf.hasThumbnail()) {
+                   		byte[] thumbnail = intf.getThumbnail();
+                   		//LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                   		Bitmap bmpImg = BitmapFactory.decodeByteArray(thumbnail, 0, thumbnail.length);
+                   		BitmapDrawable bmd = new BitmapDrawable(getResources(),bmpImg);
+                   	    return bmpImg;
+                   	}
+                } while (false);
+        	}
+        	
+        	return null;
+        }
+        
+        /* String getCurrentImgPath() {
             String bucket;
             String date;
             String title;
@@ -200,12 +262,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
             // Do something with the values.
             Log.i("ListingImages", " bucket=" + bucket 
                    + "  date_taken=" + date + "title = " + title + "data = " + data);
-            long dateinMilliSec = Long.parseLong(date);
-            mCalendar.setTimeInMillis(dateinMilliSec);
-            int monthOfYear = mCalendar.get(Calendar.MONTH);
-            if (monthOfYear >= 0 && monthOfYear <= 11 ) {
-            	//if(!mUserFilter.contains(mMonthNames[monthOfYear])) return null;
-            }
+            
             return data;
         }
         
@@ -226,7 +283,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
             	}
 
             	if(intf == null) {
-            	    /* File doesn't exist or isn't an image */
+            	    //File doesn't exist or isn't an image 
             	}
                
             	String dateString = intf.getAttribute(ExifInterface.TAG_DATETIME);
@@ -242,7 +299,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
             } while (false);
         
             return null;
-        }
+        }*/
     }  
     
 }
