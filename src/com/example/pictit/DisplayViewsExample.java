@@ -1,5 +1,5 @@
 package com.example.pictit;
- 
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -33,55 +33,55 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 import android.widget.AdapterView.OnItemClickListener;
- 
+
 public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cursor>
-{    
+{
     int bucketColumn = 0;
 
     int dateColumn = 0;
-        
+
     int titleColumn = 0;
-        
+
     int dataColumn = 0;
     int mCurrIndex = 0;
     private GridView mgridView;
     private int mGridCount = 0;
     Calendar mCalendar = Calendar.getInstance();
     String[] mMonthNames = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
-    
+
     String mUserFilter;
-    
+
     //Map<String, String> mMap = new HashMap<String, String>();
     ArrayList<String> mList = new ArrayList<String>();
-    
-    @Override    
-    public void onCreate(Bundle savedInstanceState) 
+
+    @Override
+    public void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.displaygridview);
         getLoaderManager().initLoader(0, null, this);
-        
+
         Intent intent = getIntent();
         String filter = intent.getExtras().getString("filter");
         mUserFilter = filter;
- 
-        mgridView = (GridView) findViewById(R.id.gridview); 
+
+        mgridView = (GridView) findViewById(R.id.gridview);
         mgridView.setBackgroundColor(color.darker_gray);
         mgridView.setVerticalSpacing(1);
         mgridView.setHorizontalSpacing(1);
-        mgridView.setOnItemClickListener(new OnItemClickListener() 
+        mgridView.setOnItemClickListener(new OnItemClickListener()
         {
-            public void onItemClick(AdapterView parent, 
-            View v, int position, long id) 
-            {                
-                Toast.makeText(getBaseContext(), 
-                        "pic" + (position + 1) + " selected", 
+            public void onItemClick(AdapterView parent,
+            View v, int position, long id)
+            {
+                Toast.makeText(getBaseContext(),
+                        "pic" + (position + 1) + " selected",
                         Toast.LENGTH_SHORT).show();
             }
         });
-        
+
     }
- 
+
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
         // which image properties are we querying
@@ -105,7 +105,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                 );
         return cur;
     }
-    
+
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
         String imagePath = "";
@@ -115,48 +115,48 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
         } else {
             //imagePath = imageUri.getPath();
         }
-        //setupImageView();        
+        //setupImageView();
     }
-    
+
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
     }
-    
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
         return true;
     }
-    
-    public class ImageAdapter extends BaseAdapter 
+
+    public class ImageAdapter extends BaseAdapter
     {
         private Context context;
         private Cursor  cur;
- 
-        public ImageAdapter(Context c, Cursor data) 
+
+        public ImageAdapter(Context c, Cursor data)
         {
             context = c;
             cur = data;
             setupCursor();
             performQueryUsingUserFilter();
         }
- 
+
         //---returns the number of images---
         public int getCount() {
             return mList.size();
         }
- 
+
         public Object getItem(int position) {
             return null;
         }
- 
+
         public long getItemId(int position) {
             return 0;
         }
- 
+
         //---returns an ImageView view---
-        public View getView(int position, View convertView, ViewGroup parent) 
+        public View getView(int position, View convertView, ViewGroup parent)
         {
             ImageView imageView;
             if (convertView == null) {
@@ -174,7 +174,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
 
             return imageView;
         }
-        
+
         void setupCursor() {
             if (cur.moveToFirst()) {
                 bucketColumn = cur.getColumnIndex(
@@ -182,25 +182,25 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
 
                 dateColumn = cur.getColumnIndex(
                     MediaStore.Images.Media.DATE_TAKEN);
-                
+
                 titleColumn = cur.getColumnIndex(
                         MediaStore.Images.Media.TITLE);
-                
+
                 dataColumn = cur.getColumnIndex(
                         MediaStore.Images.Media.DATA);
-                
-                Log.d("ListingImages", cur.getPosition() + " : " + dateColumn ); 
-            } 
+
+                Log.d("ListingImages", cur.getPosition() + " : " + dateColumn );
+            }
         }
-        
+
         void performQueryUsingUserFilter() {
-            
-            
+
+
             do {
                 boolean added = false;
                 String date = cur.getString(dateColumn);
                 String path = cur.getString(dataColumn);
-                
+
                 long dateinMilliSec = Long.parseLong(date);
                 mCalendar.setTimeInMillis(dateinMilliSec);
                 int monthOfYear = mCalendar.get(Calendar.MONTH);
@@ -211,12 +211,12 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                         //mMap.put(path, mMonthNames[monthOfYear]);
                     } else
                         Log.i("monthOfYear  : "," mMonthNames[monthOfYear]");
-                    
+
                     ExifInterface intf = null;
                     //String data = null;
-                    
+
                     {
-                        
+
                        GeoDecoder geoDecoder = null;
                        String city = null;
                        try {
@@ -229,22 +229,22 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                        city = geoDecoder.getAddress(context).get(0).getLocality();
                            if(mUserFilter.replace(" ", "").contains(city.replace(" ","")) && !added) {
                                mList.add(path);
-                        } 
+                        }
                     }
-                    
+
                 //}
             } while (cur.moveToNext());
         }
-        
+
         Bitmap getNextPic() {
             if ( mCurrIndex < mList.size() ) {
                 String path = mList.get(mCurrIndex);
                 mCurrIndex++;
-                
+
                 do {
                     ExifInterface intf = null;
                     //String data = null;
-                    
+
                     try {
                         intf = new ExifInterface(path);
                     } catch(IOException e) {
@@ -252,9 +252,9 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                     }
 
                     if(intf == null) {
-                        //File doesn't exist or isn't an image 
+                        //File doesn't exist or isn't an image
                     }
-                   
+
                     String dateString = intf.getAttribute(ExifInterface.TAG_DATETIME);
                        //Log.d("PATH : ", data);
                        Log.d("dateString : ", dateString);
@@ -267,10 +267,10 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                        }
                 } while (false);
             }
-            
+
             return null;
         }
-        
+
         /* String getCurrentImgPath() {
             String bucket;
             String date;
@@ -282,22 +282,22 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
             date = cur.getString(dateColumn);
             title = cur.getString(titleColumn);
             data = cur.getString(dataColumn);
-       
+
             // Do something with the values.
-            Log.i("ListingImages", " bucket=" + bucket 
+            Log.i("ListingImages", " bucket=" + bucket
                    + "  date_taken=" + date + "title = " + title + "data = " + data);
-            
+
             return data;
         }
-        
+
         Bitmap getNextPic() {
-            if (!cur.moveToNext()) return null; 
-            
+            if (!cur.moveToNext()) return null;
+
             Log.d("ListingImages"," query count= "+cur.getCount());
             do {
                 ExifInterface intf = null;
                 String data = null;
-                
+
                 try {
                     data = getCurrentImgPath();
                     if (null == data) return null;
@@ -307,9 +307,9 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                 }
 
                 if(intf == null) {
-                    //File doesn't exist or isn't an image 
+                    //File doesn't exist or isn't an image
                 }
-               
+
                 String dateString = intf.getAttribute(ExifInterface.TAG_DATETIME);
                    Log.d("PATH : ", data);
                    Log.d("dateString : ", dateString);
@@ -321,9 +321,9 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                        return bmpImg;
                    }
             } while (false);
-        
+
             return null;
         }*/
-    }  
-    
+    }
+
 }

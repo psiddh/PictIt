@@ -46,7 +46,7 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
     private int LIST_ID = 1001;
 
     private Handler mHandler = new Handler();
-    
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -89,7 +89,7 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
                 );
         return cur;
     }
-    
+
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
     	String imagePath = "";
@@ -103,20 +103,20 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
             //imagePath = imageUri.getPath();
         }
 
-        //setupImageView();    	
+        //setupImageView();
     }
-    
+
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
     }
-    
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
         return true;
     }
-    
+
     void showGridView(String filter) {
     	Intent intent = new Intent(getBaseContext(), DisplayViewsExample.class);
     	intent.putExtra("filter", filter);
@@ -147,10 +147,10 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
             }
         }).start();*/
     }
-    
+
     void testPath(String path) {
     	ExifInterface intf = null;
-    	
+
     	try {
     	     //= "/storage/emulated/legacy/DCIM/Camera/IMG_20131204_121206.jpg";
 			intf = new ExifInterface(path );
@@ -165,7 +165,7 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
     	String dateString = intf.getAttribute(ExifInterface.TAG_DATETIME);
        	Log.d("PATH : ", path);
        	Log.d("dateString : ", dateString);
-       	
+
        	if (intf.hasThumbnail()) {
        		byte[] thumbnail = intf.getThumbnail();
        		LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -180,52 +180,52 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
        		//mImgView.setPadding(2, 0, 9, 5);
        		//mImgView.setImageDrawable(bmd);
        		//mImgView.setImageBitmap(bmpImg);
-            
+
           //mLinearLayout.addView(imageView);
        	}
     }
-    
+
     public void speak() {
 		  Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-		 
+
 		  // Specify the calling package to identify your application
 		  intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getClass()
 		    .getPackage().getName());
-		 
+
 		  // Display an hint to the user about what he should say.
 		  //intent.putExtra(RecognizerIntent.EXTRA_PROMPT, metTextHint.getText()
 		//.toString());
-		 
+
 		  // Given an hint to the recognizer about what the user is going to say
 		  //There are two form of language model available
 		  //1.LANGUAGE_MODEL_WEB_SEARCH : For short phrases
 		  //2.LANGUAGE_MODEL_FREE_FORM  : If not sure about the words or phrases and its domain.
 		intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
 		    RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH);
-    	
+
   	  //Start the Voice recognizer activity for the result.
   	  startActivityForResult(intent, VOICE_RECOGNITION_REQUEST_CODE);
- 
+
     }
-    
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
    	 ArrayList<String> textMatchList = null;
      if (requestCode == VOICE_RECOGNITION_REQUEST_CODE)
-    
+
       //If Voice recognition is successful then it returns RESULT_OK
       if(resultCode == RESULT_OK) {
-    
+
        textMatchList = data
        .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-       
+
        //Bundle extras = data.getExtras();
-       int SearchState = data.getIntExtra("SearchState", 0);           
+       int SearchState = data.getIntExtra("SearchState", 0);
        if (!textMatchList.isEmpty()) {
         // If first Match contains the 'search' word
         // Then start web search.
         if (textMatchList.get(0).contains("search")) {
-    
+
            String searchQuery = textMatchList.get(0);
                                               searchQuery = searchQuery.replace("search","");
            Intent search = new Intent(Intent.ACTION_WEB_SEARCH);
@@ -251,21 +251,21 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
       }
      super.onActivityResult(requestCode, resultCode, data);
 
-     
+
      Intent resultIntent = new Intent();
      resultIntent.putExtra(RecognizerIntent.EXTRA_RESULTS, textMatchList);
      //TODO Add extras or a data URI to this intent as appropriate.
      setResult(Activity.RESULT_OK, resultIntent);
      //CameraMainActivity.this.onActivityResult(requestCode, resultCode, data);
     }
-    
+
     /**
      * Helper method to show the toast message
      **/
      void showToastMessage(String message){
       Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
      }
-     
+
     int doWork() {
     	try {
 			Thread.sleep(1000);
@@ -276,9 +276,9 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
     	mProgressStatus+=10;
     	return mProgressStatus;
     }
-    
+
     void enumeratePics(Cursor cur) {
-    	
+
 
         Log.d("ListingImages"," query count= "+cur.getCount());
 
@@ -292,15 +292,15 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
 
             int dateColumn = cur.getColumnIndex(
                 MediaStore.Images.Media.DATE_TAKEN);
-            
+
             int titleColumn = cur.getColumnIndex(
                     MediaStore.Images.Media.TITLE);
-            
+
             int dataColumn = cur.getColumnIndex(
                     MediaStore.Images.Media.DATA);
-            
-            Log.d("ListingImages", cur.getPosition() + " : " + dateColumn ); 
-            
+
+            Log.d("ListingImages", cur.getPosition() + " : " + dateColumn );
+
 
             do {
                 // Get the field values
@@ -308,9 +308,9 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
                 date = cur.getString(dateColumn);
                 title = cur.getString(titleColumn);
                 data = cur.getString(dataColumn);
-           
+
                 // Do something with the values.
-                Log.i("ListingImages", " bucket=" + bucket 
+                Log.i("ListingImages", " bucket=" + bucket
                        + "  date_taken=" + date + "title = " + title + "data = " + data);
                 //if (!bucket.equals("Camera"))
                   testPath(data);
@@ -318,5 +318,5 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
 
         }
     }
-    
+
 }
