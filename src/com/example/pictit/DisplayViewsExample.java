@@ -84,7 +84,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
  
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-    	// which image properties are we querying
+        // which image properties are we querying
         String[] projection = new String[]{
                 MediaStore.Images.Media._ID,
                 MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
@@ -108,14 +108,14 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
     
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-    	String imagePath = "";
-    	if (data != null) {
-    		mGridCount = data.getCount();
+        String imagePath = "";
+        if (data != null) {
+            mGridCount = data.getCount();
             mgridView.setAdapter(new ImageAdapter(this,data));
         } else {
             //imagePath = imageUri.getPath();
         }
-        //setupImageView();    	
+        //setupImageView();        
     }
     
     @Override
@@ -144,11 +144,11 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
  
         //---returns the number of images---
         public int getCount() {
-            return mList.size() - 1;
+            return mList.size();
         }
  
         public Object getItem(int position) {
-        	return null;
+            return null;
         }
  
         public long getItemId(int position) {
@@ -194,57 +194,81 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
         }
         
         void performQueryUsingUserFilter() {
-        	
-        	do {
-	        	String date = cur.getString(dateColumn);
-	        	String path = cur.getString(dataColumn);
-	        	
-	        	long dateinMilliSec = Long.parseLong(date);
-	            mCalendar.setTimeInMillis(dateinMilliSec);
-	            int monthOfYear = mCalendar.get(Calendar.MONTH);
-	            if (monthOfYear >= 0 && monthOfYear <= 11 ) {
-	            	if(mUserFilter.contains(mMonthNames[monthOfYear])) {
-	            		mList.add(path);
-	            		//mMap.put(path, mMonthNames[monthOfYear]);
-	            	} else
-	            		Log.i("monthOfYear  : "," mMonthNames[monthOfYear]");
-	            }
-        	} while (cur.moveToNext());
+            
+            
+            do {
+                boolean added = false;
+                String date = cur.getString(dateColumn);
+                String path = cur.getString(dataColumn);
+                
+                long dateinMilliSec = Long.parseLong(date);
+                mCalendar.setTimeInMillis(dateinMilliSec);
+                int monthOfYear = mCalendar.get(Calendar.MONTH);
+                //if (monthOfYear >= 0 && monthOfYear <= 11 ) {
+                    if(mUserFilter.contains(mMonthNames[monthOfYear])) {
+                        mList.add(path);
+                        added = true;
+                        //mMap.put(path, mMonthNames[monthOfYear]);
+                    } else
+                        Log.i("monthOfYear  : "," mMonthNames[monthOfYear]");
+                    
+                    ExifInterface intf = null;
+                    //String data = null;
+                    
+                    {
+                        
+                       GeoDecoder geoDecoder = null;
+                       String city = null;
+                       try {
+                               geoDecoder = new GeoDecoder(new ExifInterface(path));
+                               if (!geoDecoder.isValid()) continue;
+                       } catch (IOException e) {
+                               // TODO Auto-generated catch block
+                               e.printStackTrace();
+                       }
+                       city = geoDecoder.getAddress(context).get(0).getLocality();
+                           if(mUserFilter.replace(" ", "").contains(city.replace(" ","")) && !added) {
+                               mList.add(path);
+                        } 
+                    }
+                    
+                //}
+            } while (cur.moveToNext());
         }
         
         Bitmap getNextPic() {
-        	if ( mCurrIndex < mList.size() ) {
-        		String path = mList.get(mCurrIndex);
-        		mCurrIndex++;
-        		
-        		do {
+            if ( mCurrIndex < mList.size() ) {
+                String path = mList.get(mCurrIndex);
+                mCurrIndex++;
+                
+                do {
                     ExifInterface intf = null;
                     //String data = null;
-                	
-                	try {
-            			intf = new ExifInterface(path);
-                	} catch(IOException e) {
-                	    e.printStackTrace();
-                	}
+                    
+                    try {
+                        intf = new ExifInterface(path);
+                    } catch(IOException e) {
+                        e.printStackTrace();
+                    }
 
-                	if(intf == null) {
-                	    //File doesn't exist or isn't an image 
-                	}
+                    if(intf == null) {
+                        //File doesn't exist or isn't an image 
+                    }
                    
-                	String dateString = intf.getAttribute(ExifInterface.TAG_DATETIME);
-                   	//Log.d("PATH : ", data);
-                   	Log.d("dateString : ", dateString);
-                	if (intf.hasThumbnail()) {
-                   		byte[] thumbnail = intf.getThumbnail();
-                   		//LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                   		Bitmap bmpImg = BitmapFactory.decodeByteArray(thumbnail, 0, thumbnail.length);
-                   		BitmapDrawable bmd = new BitmapDrawable(getResources(),bmpImg);
-                   	    return bmpImg;
-                   	}
+                    String dateString = intf.getAttribute(ExifInterface.TAG_DATETIME);
+                       //Log.d("PATH : ", data);
+                       Log.d("dateString : ", dateString);
+                    if (intf.hasThumbnail()) {
+                           byte[] thumbnail = intf.getThumbnail();
+                           //LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                           Bitmap bmpImg = BitmapFactory.decodeByteArray(thumbnail, 0, thumbnail.length);
+                           BitmapDrawable bmd = new BitmapDrawable(getResources(),bmpImg);
+                           return bmpImg;
+                       }
                 } while (false);
-        	}
-        	
-        	return null;
+            }
+            
+            return null;
         }
         
         /* String getCurrentImgPath() {
@@ -267,35 +291,35 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
         }
         
         Bitmap getNextPic() {
-        	if (!cur.moveToNext()) return null; 
-        	
+            if (!cur.moveToNext()) return null; 
+            
             Log.d("ListingImages"," query count= "+cur.getCount());
             do {
                 ExifInterface intf = null;
                 String data = null;
-            	
-            	try {
-            		data = getCurrentImgPath();
-            		if (null == data) return null;
-        			intf = new ExifInterface(data);
-            	} catch(IOException e) {
-            	    e.printStackTrace();
-            	}
+                
+                try {
+                    data = getCurrentImgPath();
+                    if (null == data) return null;
+                    intf = new ExifInterface(data);
+                } catch(IOException e) {
+                    e.printStackTrace();local
+                }
 
-            	if(intf == null) {
-            	    //File doesn't exist or isn't an image 
-            	}
+                if(intf == null) {
+                    //File doesn't exist or isn't an image 
+                }
                
-            	String dateString = intf.getAttribute(ExifInterface.TAG_DATETIME);
-               	Log.d("PATH : ", data);
-               	Log.d("dateString : ", dateString);
-            	if (intf.hasThumbnail()) {
-               		byte[] thumbnail = intf.getThumbnail();
-               		//LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-               		Bitmap bmpImg = BitmapFactory.decodeByteArray(thumbnail, 0, thumbnail.length);
-               		BitmapDrawable bmd = new BitmapDrawable(getResources(),bmpImg);
-               	    return bmpImg;
-               	}
+                String dateString = intf.getAttribute(ExifInterface.TAG_DATETIME);
+                   Log.d("PATH : ", data);
+                   Log.d("dateString : ", dateString);
+                if (intf.hasThumbnail()) {
+                       byte[] thumbnail = intf.getThumbnail();
+                       //LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                       Bitmap bmpImg = BitmapFactory.decodeByteArray(thumbnail, 0, thumbnail.length);
+                       BitmapDrawable bmd = new BitmapDrawable(getResources(),bmpImg);
+                       return bmpImg;
+                   }
             } while (false);
         
             return null;

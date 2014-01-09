@@ -60,7 +60,7 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
             public void onClick(View v) {
                 // Perform action on click
             	speak();
-            	//showGridView("December");
+            	//showGridView("Mountain View");
             }
         });
         getLoaderManager().initLoader(0, null, this);
