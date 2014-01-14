@@ -24,6 +24,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.speech.RecognizerIntent;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -32,6 +33,7 @@ import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+//import android.widget.ShareActionProvider;
 import android.widget.Toast;
 
 public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
@@ -45,7 +47,36 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
     private LinearLayout mLinearLayout;
     private int LIST_ID = 1001;
 
+    //private ShareActionProvider mShareActionProvider;  
+
     private Handler mHandler = new Handler();
+    
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.main, menu);
+        // Locate MenuItem with ShareActionProvider  
+        /*MenuItem item = menu.findItem(R.id.menu_item_share);  
+        // Fetch and store ShareActionProvider  
+        mShareActionProvider = (ShareActionProvider) item.getActionProvider();  
+        setShareIntent(createShareIntent());  
+        // Return true to display menu  */
+        return true;
+    }
+    
+    // Call to update the share intent  
+    /*private void setShareIntent(Intent shareIntent) {  
+         if (mShareActionProvider != null) {  
+              mShareActionProvider.setShareIntent(shareIntent);  
+         }  
+    }  
+    private Intent createShareIntent() {  
+         Intent shareIntent = new Intent(Intent.ACTION_SEND);  
+         shareIntent.setType("text/plain");  
+         shareIntent.putExtra(Intent.EXTRA_TEXT,  
+                   "http://androidtrainningcenter.blogspot.in");  
+         return shareIntent;  
+    }  */
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,8 +90,8 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
         button.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 // Perform action on click
-            	speak();
-            	//showGridView("Mountain View");
+            	//speak();
+            	showGridView("January");
             }
         });
         getLoaderManager().initLoader(0, null, this);
@@ -108,13 +139,6 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
 
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.main, menu);
-        return true;
     }
 
     void showGridView(String filter) {

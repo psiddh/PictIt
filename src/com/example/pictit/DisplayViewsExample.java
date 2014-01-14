@@ -1,5 +1,6 @@
 package com.example.pictit;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -23,6 +24,7 @@ import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -31,6 +33,7 @@ import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.ShareActionProvider;
 import android.widget.Toast;
 import android.widget.AdapterView.OnItemClickListener;
 
@@ -48,6 +51,10 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
     private int mGridCount = 0;
     Calendar mCalendar = Calendar.getInstance();
     String[] mMonthNames = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
+    
+    private ShareActionProvider mShareActionProvider; 
+    
+    ArrayList<Uri> mImageUris = new ArrayList<Uri>();
 
     String mUserFilter;
 
@@ -95,6 +102,9 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
 
         // Get the base URI for the People table in the Contacts content provider.
         Uri images = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+        String test = images.toString();
+        
+        test = MediaStore.Images.Media.INTERNAL_CONTENT_URI.toString();
 
         // Make the query.
         CursorLoader cur = new CursorLoader(this, images,
@@ -122,12 +132,51 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
     public void onLoaderReset(Loader<Cursor> loader) {
     }
 
+    
+    /*public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }*/
+    
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
+        // Locate MenuItem with ShareActionProvider  
+        MenuItem item = menu.findItem(R.id.menu_item_share);  
+        // Fetch and store ShareActionProvider  
+        mShareActionProvider = (ShareActionProvider) item.getActionProvider();  
+        setShareIntent(createShareIntent());  
+        // Return true to display menu  
         return true;
     }
+    
+    // Call to update the share intent  
+    private void setShareIntent(Intent shareIntent) {  
+         if (mShareActionProvider != null) {  
+              mShareActionProvider.setShareIntent(shareIntent);  
+         }  
+    }  
+    
+    private Intent createShareIntent() {
+         //Intent shareIntent = new Intent(Intent.ACTION_SEND);
+    	Intent shareIntent = new Intent();
+         shareIntent.setAction(Intent.ACTION_SEND_MULTIPLE);
+
+         
+         for (int i = 0; i < mList.size(); i++) {
+             Uri imageUri = Uri.parse("file://" + mList.get(i));
+             mImageUris.add(imageUri);
+         }
+         
+         shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, mImageUris);
+         shareIntent.setType("image/jpeg");
+         //shareIntent.setType("text/plain");  
+         //shareIntent.putExtra(Intent.EXTRA_TEXT,  
+                   //"http://androidtrainningcenter.blogspot.in");  
+         return shareIntent;  
+    }  
 
     public class ImageAdapter extends BaseAdapter
     {
@@ -200,13 +249,22 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                 boolean added = false;
                 String date = cur.getString(dateColumn);
                 String path = cur.getString(dataColumn);
+                
+                //Uri uri = Uri.fromFile(getFileStreamPath(path));
+                //mImageUris.add(path);
 
+                
                 long dateinMilliSec = Long.parseLong(date);
                 mCalendar.setTimeInMillis(dateinMilliSec);
                 int monthOfYear = mCalendar.get(Calendar.MONTH);
                 //if (monthOfYear >= 0 && monthOfYear <= 11 ) {
                     if(mUserFilter.contains(mMonthNames[monthOfYear])) {
                         mList.add(path);
+                        //Uri imageUri = Uri.parse(path);
+                        //mImageUris.add(imageUri);
+                        File photo = new File(android.os.Environment.DIRECTORY_PICTURES  
+                                , path);  // .getExternalStorageDirectory()
+                        //mImageUris.add(Uri.fromFile(photo));
                         added = true;
                         //mMap.put(path, mMonthNames[monthOfYear]);
                     } else
@@ -229,11 +287,15 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                        city = geoDecoder.getAddress(context).get(0).getLocality();
                            if(mUserFilter.replace(" ", "").contains(city.replace(" ","")) && !added) {
                                mList.add(path);
+                               Uri imageUri = Uri.parse(path);
+                               //mImageUris.add(imageUri);
                         }
                     }
 
                 //}
             } while (cur.moveToNext());
+            Log.d("ListingImages","");
+            
         }
 
         Bitmap getNextPic() {
