@@ -10,6 +10,11 @@
      android:id="@+id/menu_item_share"  
      android:actionProviderClass="android.widget.ShareActionProvider"  
      android:showAsAction="ifRoom"  
-     android:title="Share"/>  
+     android:title="Share"/> 
+     
+       <item android:id="@+id/menu_search"
+        android:icon="@android:drawable/ic_menu_search"
+        android:title="SearchWifiP2P" 
+        android:showAsAction="ifRoom"/>
 
 </menu>

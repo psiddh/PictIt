@@ -106,16 +106,16 @@ Geocoder geocoder;
 	geocoder = new Geocoder(context, Locale.getDefault());
 	try {
 	addresses = geocoder.getFromLocation(getLat(), getLong(), 1);
-} catch (IOException e) {
-	// TODO Auto-generated catch block
-	e.printStackTrace();
-}
-
+	
 	String address = addresses.get(0).getAddressLine(0);
 	String city = addresses.get(0).getAddressLine(1);
 	String country = addresses.get(0).getAddressLine(2);
 	String local = addresses.get(0).getLocality();
-	Log.i("address : " , address + "  " + country);
+	Log.i("address : " , address + "  " + country + "  " + city);
+} catch (IOException e) {
+	// TODO Auto-generated catch block
+	e.printStackTrace();
+}
 
 	return addresses;
 }

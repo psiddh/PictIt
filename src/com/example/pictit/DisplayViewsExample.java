@@ -36,7 +36,6 @@ import android.widget.ProgressBar;
 import android.widget.ShareActionProvider;
 import android.widget.Toast;
 import android.widget.AdapterView.OnItemClickListener;
-
 public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cursor>
 {
     int bucketColumn = 0;
@@ -50,7 +49,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
     private GridView mgridView;
     private int mGridCount = 0;
     Calendar mCalendar = Calendar.getInstance();
-    String[] mMonthNames = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
+    String[] mMonthNames = {"January", "february","March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
     
     private ShareActionProvider mShareActionProvider; 
     
@@ -150,6 +149,24 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
         setShareIntent(createShareIntent());  
         // Return true to display menu  
         return true;
+    }
+    
+    /*
+     * (non-Javadoc)
+     * @see android.app.Activity#onOptionsItemSelected(android.view.MenuItem)
+     */
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.menu_search:
+                Intent intent = new Intent(getBaseContext(), WiFiDirectActivity.class);
+                intent.putStringArrayListExtra("image_paths", mList);
+                startActivity(intent);
+            	return true;
+            default:
+            	break;
+        }
+        return false;
     }
     
     // Call to update the share intent  
@@ -267,8 +284,9 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                         //mImageUris.add(Uri.fromFile(photo));
                         added = true;
                         //mMap.put(path, mMonthNames[monthOfYear]);
-                    } else
-                        Log.i("monthOfYear  : "," mMonthNames[monthOfYear]");
+                    } else {
+                        //Log.i("monthOfYear  : "," mMonthNames[monthOfYear]");
+                    }
 
                     ExifInterface intf = null;
                     //String data = null;
@@ -284,12 +302,12 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                                // TODO Auto-generated catch block
                                e.printStackTrace();
                        }
-                       city = geoDecoder.getAddress(context).get(0).getLocality();
+                       /*city = geoDecoder.getAddress(context).get(0).getLocality();
                            if(mUserFilter.replace(" ", "").contains(city.replace(" ","")) && !added) {
                                mList.add(path);
                                Uri imageUri = Uri.parse(path);
                                //mImageUris.add(imageUri);
-                        }
+                        }*/
                     }
 
                 //}
