@@ -267,7 +267,6 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                 InputStream inputstream = client.getInputStream();
                 copyFile(inputstream, new FileOutputStream(f));
                 serverSocket.close();
-
                 // Tell the media scanner about the new file so that it is
                 // immediately available to the user.
                 MediaScannerConnection.scanFile(context,
