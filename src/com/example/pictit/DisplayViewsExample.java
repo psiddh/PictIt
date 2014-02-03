@@ -50,9 +50,9 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
     private int mGridCount = 0;
     Calendar mCalendar = Calendar.getInstance();
     String[] mMonthNames = {"January", "february","March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
-    
-    private ShareActionProvider mShareActionProvider; 
-    
+
+    private ShareActionProvider mShareActionProvider;
+
     ArrayList<Uri> mImageUris = new ArrayList<Uri>();
 
     String mUserFilter;
@@ -102,7 +102,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
         // Get the base URI for the People table in the Contacts content provider.
         Uri images = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
         String test = images.toString();
-        
+
         test = MediaStore.Images.Media.INTERNAL_CONTENT_URI.toString();
 
         // Make the query.
@@ -131,26 +131,26 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
     public void onLoaderReset(Loader<Cursor> loader) {
     }
 
-    
+
     /*public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
         return true;
     }*/
-    
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
-        // Locate MenuItem with ShareActionProvider  
-        MenuItem item = menu.findItem(R.id.menu_item_share);  
-        // Fetch and store ShareActionProvider  
-        mShareActionProvider = (ShareActionProvider) item.getActionProvider();  
-        setShareIntent(createShareIntent());  
-        // Return true to display menu  
+        // Locate MenuItem with ShareActionProvider
+        MenuItem item = menu.findItem(R.id.menu_item_share);
+        // Fetch and store ShareActionProvider
+        mShareActionProvider = (ShareActionProvider) item.getActionProvider();
+        setShareIntent(createShareIntent());
+        // Return true to display menu
         return true;
     }
-    
+
     /*
      * (non-Javadoc)
      * @see android.app.Activity#onOptionsItemSelected(android.view.MenuItem)
@@ -168,32 +168,32 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
         }
         return false;
     }
-    
-    // Call to update the share intent  
-    private void setShareIntent(Intent shareIntent) {  
-         if (mShareActionProvider != null) {  
-              mShareActionProvider.setShareIntent(shareIntent);  
-         }  
-    }  
-    
+
+    // Call to update the share intent
+    private void setShareIntent(Intent shareIntent) {
+         if (mShareActionProvider != null) {
+              mShareActionProvider.setShareIntent(shareIntent);
+         }
+    }
+
     private Intent createShareIntent() {
          //Intent shareIntent = new Intent(Intent.ACTION_SEND);
     	Intent shareIntent = new Intent();
          shareIntent.setAction(Intent.ACTION_SEND_MULTIPLE);
 
-         
+
          for (int i = 0; i < mList.size(); i++) {
              Uri imageUri = Uri.parse("file://" + mList.get(i));
              mImageUris.add(imageUri);
          }
-         
+
          shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, mImageUris);
          shareIntent.setType("image/jpeg");
-         //shareIntent.setType("text/plain");  
-         //shareIntent.putExtra(Intent.EXTRA_TEXT,  
-                   //"http://androidtrainningcenter.blogspot.in");  
-         return shareIntent;  
-    }  
+         //shareIntent.setType("text/plain");
+         //shareIntent.putExtra(Intent.EXTRA_TEXT,
+                   //"http://androidtrainningcenter.blogspot.in");
+         return shareIntent;
+    }
 
     public class ImageAdapter extends BaseAdapter
     {
@@ -266,20 +266,20 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                 boolean added = false;
                 String date = cur.getString(dateColumn);
                 String path = cur.getString(dataColumn);
-                
+
                 //Uri uri = Uri.fromFile(getFileStreamPath(path));
                 //mImageUris.add(path);
 
-                
+
                 long dateinMilliSec = Long.parseLong(date);
                 mCalendar.setTimeInMillis(dateinMilliSec);
                 int monthOfYear = mCalendar.get(Calendar.MONTH);
                 //if (monthOfYear >= 0 && monthOfYear <= 11 ) {
-                    if(mUserFilter.contains(mMonthNames[monthOfYear])) {
+                    if(mUserFilter.toLowerCase().contains(mMonthNames[monthOfYear].toLowerCase())) {
                         mList.add(path);
                         //Uri imageUri = Uri.parse(path);
                         //mImageUris.add(imageUri);
-                        File photo = new File(android.os.Environment.DIRECTORY_PICTURES  
+                        File photo = new File(android.os.Environment.DIRECTORY_PICTURES
                                 , path);  // .getExternalStorageDirectory()
                         //mImageUris.add(Uri.fromFile(photo));
                         added = true;
@@ -313,7 +313,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                 //}
             } while (cur.moveToNext());
             Log.d("ListingImages","");
-            
+
         }
 
         Bitmap getNextPic() {

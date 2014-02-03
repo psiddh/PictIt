@@ -47,35 +47,35 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
     private LinearLayout mLinearLayout;
     private int LIST_ID = 1001;
 
-    //private ShareActionProvider mShareActionProvider;  
+    //private ShareActionProvider mShareActionProvider;
 
     private Handler mHandler = new Handler();
-    
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
-        // Locate MenuItem with ShareActionProvider  
-        /*MenuItem item = menu.findItem(R.id.menu_item_share);  
-        // Fetch and store ShareActionProvider  
-        mShareActionProvider = (ShareActionProvider) item.getActionProvider();  
-        setShareIntent(createShareIntent());  
+        // Locate MenuItem with ShareActionProvider
+        /*MenuItem item = menu.findItem(R.id.menu_item_share);
+        // Fetch and store ShareActionProvider
+        mShareActionProvider = (ShareActionProvider) item.getActionProvider();
+        setShareIntent(createShareIntent());
         // Return true to display menu  */
         return true;
     }
-    
-    // Call to update the share intent  
-    /*private void setShareIntent(Intent shareIntent) {  
-         if (mShareActionProvider != null) {  
-              mShareActionProvider.setShareIntent(shareIntent);  
-         }  
-    }  
-    private Intent createShareIntent() {  
-         Intent shareIntent = new Intent(Intent.ACTION_SEND);  
-         shareIntent.setType("text/plain");  
-         shareIntent.putExtra(Intent.EXTRA_TEXT,  
-                   "http://androidtrainningcenter.blogspot.in");  
-         return shareIntent;  
+
+    // Call to update the share intent
+    /*private void setShareIntent(Intent shareIntent) {
+         if (mShareActionProvider != null) {
+              mShareActionProvider.setShareIntent(shareIntent);
+         }
+    }
+    private Intent createShareIntent() {
+         Intent shareIntent = new Intent(Intent.ACTION_SEND);
+         shareIntent.setType("text/plain");
+         shareIntent.putExtra(Intent.EXTRA_TEXT,
+                   "http://androidtrainningcenter.blogspot.in");
+         return shareIntent;
     }  */
 
     @Override

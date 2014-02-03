@@ -106,7 +106,7 @@ Geocoder geocoder;
 	geocoder = new Geocoder(context, Locale.getDefault());
 	try {
 	addresses = geocoder.getFromLocation(getLat(), getLong(), 1);
-	
+
 	String address = addresses.get(0).getAddressLine(0);
 	String city = addresses.get(0).getAddressLine(1);
 	String country = addresses.get(0).getAddressLine(2);

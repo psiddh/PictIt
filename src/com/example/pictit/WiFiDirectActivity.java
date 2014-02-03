@@ -49,7 +49,7 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
     private final IntentFilter intentFilter = new IntentFilter();
     private Channel channel;
     private BroadcastReceiver receiver = null;
-    
+
     ArrayList<String> mImageList = new ArrayList<String>();
 
     /**
@@ -73,7 +73,7 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
 
         manager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
         channel = manager.initialize(this, getMainLooper(), null);
-        
+
         Intent intentImages = getIntent();
         mImageList = intentImages.getStringArrayListExtra("image_paths");
     }
@@ -97,7 +97,7 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
      * BroadcastReceiver receiving a state change event.
      */
     public void resetData() {
-        
+
     }
 
     @Override
@@ -155,7 +155,7 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
                 return super.onOptionsItemSelected(item);
         }
     }
-    
+
     public void onInitiateDiscovery() {
         if (progressDialog != null && progressDialog.isShowing()) {
             progressDialog.dismiss();
@@ -165,11 +165,11 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
 
                     @Override
                     public void onCancel(DialogInterface dialog) {
-                        
+
                     }
                 });
     }
-    
+
     @Override
     public void onChannelDisconnected() {
         // we will try once more
@@ -184,13 +184,13 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
                     Toast.LENGTH_LONG).show();
         }
     }
-    
+
     @Override
     public void showDetails(WifiP2pDevice device) {
         DeviceDetailFragment fragment = (DeviceDetailFragment) getFragmentManager()
                 .findFragmentById(R.id.frag_detail);
         fragment.showDetails(device);
-        
+
         fragment.updateImageList(mImageList);
 
     }
@@ -232,7 +232,7 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
 
         });
     }
-    
+
     @Override
     public void cancelDisconnect() {
 

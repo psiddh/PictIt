@@ -49,13 +49,13 @@ public class FileTransferService extends IntentService {
         Context context = getApplicationContext();
         if (intent.getAction().equals(ACTION_SEND_FILE)) {
         	ArrayList<String> mList = intent.getStringArrayListExtra(EXTRAS_FILE_PATH);
-        	
+
         	for (int i = 0; i < mList.size(); i++) {
                 Uri imageUri = Uri.parse("file://" + mList.get(i));
                 mImageUris.add(imageUri);
                 break;
             }
-        	
+
             String fileUri = mImageUris.get(0).toString();
             String host = intent.getExtras().getString(EXTRAS_GROUP_OWNER_ADDRESS);
             Socket socket = new Socket();
