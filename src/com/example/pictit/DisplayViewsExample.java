@@ -275,7 +275,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                 mCalendar.setTimeInMillis(dateinMilliSec);
                 int monthOfYear = mCalendar.get(Calendar.MONTH);
                 //if (monthOfYear >= 0 && monthOfYear <= 11 ) {
-                    if(mUserFilter.contains(mMonthNames[monthOfYear])) {
+                    if(mUserFilter.toLowerCase().contains(mMonthNames[monthOfYear].toLowerCase())) {
                         mList.add(path);
                         //Uri imageUri = Uri.parse(path);
                         //mImageUris.add(imageUri);
