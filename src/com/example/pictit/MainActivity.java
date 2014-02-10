@@ -90,8 +90,8 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
         button.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 // Perform action on click
-            	speak();
-            	//showGridView("January");
+            	//speak();
+            	showGridView("january");
             }
         });
         getLoaderManager().initLoader(0, null, this);

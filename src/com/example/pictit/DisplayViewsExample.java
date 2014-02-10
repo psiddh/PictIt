@@ -20,15 +20,18 @@ import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.media.ExifInterface;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.view.Display;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
+import android.widget.CheckBox;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -59,6 +62,21 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
 
     //Map<String, String> mMap = new HashMap<String, String>();
     ArrayList<String> mList = new ArrayList<String>();
+    
+    /**
+     * Grid view holding the images.
+     */
+    private GridView displayImages;
+    /**
+     * Image adapter for the grid view.
+     */
+    private GridImageAdapter imageAdapter1;
+    
+    /**
+     * Display used for getting the width of the screen. 
+     */
+    private Display display;
+
 
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -66,12 +84,12 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
         super.onCreate(savedInstanceState);
         setContentView(R.layout.displaygridview);
         getLoaderManager().initLoader(0, null, this);
-
+        
         Intent intent = getIntent();
         String filter = intent.getExtras().getString("filter");
         mUserFilter = filter;
 
-        mgridView = (GridView) findViewById(R.id.gridview);
+        /*mgridView = (GridView) findViewById(R.id.gridview);
         mgridView.setBackgroundColor(color.darker_gray);
         mgridView.setVerticalSpacing(1);
         mgridView.setHorizontalSpacing(1);
@@ -84,8 +102,33 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                         "pic" + (position + 1) + " selected",
                         Toast.LENGTH_SHORT).show();
             }
-        });
+        });*/
+        
+        setupViews();
 
+    }
+    
+    /**
+     * Setup the grid view.
+     */
+	private void setupViews() {
+    	displayImages = (GridView) findViewById(R.id.gridview);
+    	//displayImages.setNumColumns(3);
+    	//displayImages.setClipToPadding(false);
+    	//displayImages.setBackgroundColor(color.holo_red_light);
+    	//displayImages.setVerticalSpacing(1);
+    	//displayImages.setHorizontalSpacing(1);
+    	//displayImages.setOnItemClickListener(DisplayViewsExample.this);
+    	displayImages.setOnItemClickListener(new OnItemClickListener()
+        {
+            public void onItemClick(AdapterView parent,
+            View v, int position, long id)
+            {
+                Toast.makeText(getBaseContext(),
+                        "pic" + (position + 1) + " selected",
+                        Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     @Override
@@ -120,15 +163,107 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
         String imagePath = "";
         if (data != null) {
             mGridCount = data.getCount();
-            mgridView.setAdapter(new ImageAdapter(this,data));
+            //mgridView.setAdapter(new ImageAdapter(this,data));
+            setupCursor(data);
+            performQueryUsingUserFilter(data);
+            new LoadImagesInBackGround().execute();
+            //displayImages.setAdapter(new GridImageAdapter(this));
+            
+        	imageAdapter1 = new GridImageAdapter(getApplicationContext()); 
+            displayImages.setAdapter(imageAdapter1);
         } else {
             //imagePath = imageUri.getPath();
         }
         //setupImageView();
     }
+    
+    @Override
+    public Object onRetainNonConfigurationInstance() {
+		return null;
+    	
+    }
+    
+    private void loadImages() {
+        final Object data = getLastNonConfigurationInstance();
+    }
 
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
+    }
+    
+    void setupCursor(Cursor cur) {
+        if (cur.moveToFirst()) {
+            bucketColumn = cur.getColumnIndex(
+                MediaStore.Images.Media.BUCKET_DISPLAY_NAME);
+
+            dateColumn = cur.getColumnIndex(
+                MediaStore.Images.Media.DATE_TAKEN);
+
+            titleColumn = cur.getColumnIndex(
+                    MediaStore.Images.Media.TITLE);
+
+            dataColumn = cur.getColumnIndex(
+                    MediaStore.Images.Media.DATA);
+
+            Log.d("ListingImages", cur.getPosition() + " : " + dateColumn );
+        }
+    }
+    
+    void performQueryUsingUserFilter(Cursor cur) {
+
+
+        do {
+            boolean added = false;
+            String date = cur.getString(dateColumn);
+            String path = cur.getString(dataColumn);
+
+            //Uri uri = Uri.fromFile(getFileStreamPath(path));
+            //mImageUris.add(path);
+
+
+            long dateinMilliSec = Long.parseLong(date);
+            mCalendar.setTimeInMillis(dateinMilliSec);
+            int monthOfYear = mCalendar.get(Calendar.MONTH);
+            //if (monthOfYear >= 0 && monthOfYear <= 11 ) {
+                if(mUserFilter.toLowerCase().contains(mMonthNames[monthOfYear].toLowerCase())) {
+                    mList.add(path);
+                    //Uri imageUri = Uri.parse(path);
+                    //mImageUris.add(imageUri);
+                    File photo = new File(android.os.Environment.DIRECTORY_PICTURES
+                            , path);  // .getExternalStorageDirectory()
+                    //mImageUris.add(Uri.fromFile(photo));
+                    added = true;
+                    //mMap.put(path, mMonthNames[monthOfYear]);
+                } else {
+                    //Log.i("monthOfYear  : "," mMonthNames[monthOfYear]");
+                }
+
+                ExifInterface intf = null;
+                //String data = null;
+
+                {
+
+                   GeoDecoder geoDecoder = null;
+                   String city = null;
+                   try {
+                           geoDecoder = new GeoDecoder(new ExifInterface(path));
+                           if (!geoDecoder.isValid()) continue;
+                   } catch (IOException e) {
+                           // TODO Auto-generated catch block
+                           e.printStackTrace();
+                   }
+                   /*city = geoDecoder.getAddress(context).get(0).getLocality();
+                       if(mUserFilter.replace(" ", "").contains(city.replace(" ","")) && !added) {
+                           mList.add(path);
+                           Uri imageUri = Uri.parse(path);
+                           //mImageUris.add(imageUri);
+                    }*/
+                }
+
+            //}
+        } while (cur.moveToNext());
+        Log.d("ListingImages","");
+
     }
 
 
@@ -152,7 +287,6 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
     }
 
     /*
-     * (non-Javadoc)
      * @see android.app.Activity#onOptionsItemSelected(android.view.MenuItem)
      */
     @Override
@@ -195,6 +329,150 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
          return shareIntent;
     }
 
+    /**
+     * Adapter for our image files. 
+     *
+     */
+    class GridImageAdapter extends BaseAdapter {
+
+        private Context mContext; 
+        private ArrayList<Bitmap> photos = new ArrayList<Bitmap>();
+
+        public GridImageAdapter(Context context) { 
+            mContext = context; 
+        } 
+
+        public void addPhoto(Bitmap photo) { 
+            photos.add(photo); 
+        } 
+
+        public int getCount() { 
+            return photos.size(); 
+        } 
+
+        public Object getItem(int position) { 
+            return photos.get(position); 
+        } 
+
+        public long getItemId(int position) { 
+            return position; 
+        } 
+
+        public View getView(int position, View convertView, ViewGroup parent) { 
+            final ImageView imageView; 
+            if (convertView == null) { 
+                imageView = new ImageView(mContext); 
+            } else { 
+                imageView = (ImageView) convertView; 
+            } 
+            imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            imageView.setPadding(4, 4, 4, 4);
+            imageView.setImageBitmap(photos.get(position));
+            return imageView; 
+        } 
+    }
+    
+    Bitmap getNextPicture(String path) {
+        
+        ExifInterface intf = null;
+        //String data = null;
+        Bitmap bitmap = null;
+        Bitmap newBitmap = null;
+
+        try {
+            intf = new ExifInterface(path);
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
+
+        if(intf == null) {
+            //File doesn't exist or isn't an image
+        }
+
+        String dateString = intf.getAttribute(ExifInterface.TAG_DATETIME);
+           //Log.d("PATH : ", data);
+           Log.d("dateString : ", dateString);
+        if (intf.hasThumbnail()) {
+               byte[] thumbnail = intf.getThumbnail();
+               //LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+               bitmap = BitmapFactory.decodeByteArray(thumbnail, 0, thumbnail.length);
+               if (bitmap != null) {
+                   newBitmap = Bitmap.createScaledBitmap(bitmap, 200, 200, true);
+                   bitmap.recycle();
+                   if (newBitmap != null) {
+                       return newBitmap;
+                   }
+               }
+               //BitmapDrawable bmd = new BitmapDrawable(getResources(),bmpImg);
+               return bitmap;
+          } else {
+
+           Uri imageUri = null; ;
+           
+           try {
+        	   imageUri = Uri.parse("file://" + path);
+               bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(imageUri));
+               if (bitmap != null) {
+                   newBitmap = Bitmap.createScaledBitmap(bitmap, 200, 200, true);
+                   bitmap.recycle();
+                   if (newBitmap != null) {
+                       return newBitmap;
+                   }
+               }
+           } catch (IOException e) {
+               //Error fetching image, try to recover
+           }
+         }
+
+        return null;
+    }
+    
+    /**
+     * Add image(s) to the grid view adapter.
+     * 
+     * @param value Array of Bitmap references
+     */
+    private void addGridImage(Bitmap... value) {
+        for (Bitmap image : value) {
+            imageAdapter1.addPhoto(image);
+            imageAdapter1.notifyDataSetChanged();
+        }
+    }
+    
+    class LoadImagesInBackGround extends AsyncTask<Object, Bitmap, Object> {
+        
+        /**
+         * Load images in the background, and display each image on the screen. 
+         */
+        protected String doInBackground(Object... params) {
+            setProgressBarIndeterminateVisibility(true); 
+            for  ( ; mCurrIndex < mList.size() ;mCurrIndex++) {
+                String path = mList.get(mCurrIndex);
+                Bitmap bmp = getNextPicture(path);
+            	publishProgress(bmp);
+            }
+			return null;
+        }
+        /**
+         * Add a new Bitmap in the images grid.
+         *
+         * @param value The image.
+         */
+        public void onProgressUpdate(Bitmap... params) {
+            addGridImage(params);
+        }
+        /**
+         * Set the visibility of the progress bar to false.
+         * 
+         * @see android.os.AsyncTask#onPostExecute(java.lang.Object)
+         */
+        @Override
+        protected void onPostExecute(Object result) {
+            setProgressBarIndeterminateVisibility(false);
+        }
+    }
+
+    
     public class ImageAdapter extends BaseAdapter
     {
         private Context context;
@@ -231,6 +509,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                 imageView.setScaleType(ImageView.ScaleType.FIT_XY);
                 imageView.setPadding(5, 5, 5, 5);
                 //imageView.setImageDrawable(getNextPic());
+                
                 Bitmap bmp = getNextPic();
                 if (bmp != null)
                   imageView.setImageBitmap(bmp);
@@ -258,7 +537,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                 Log.d("ListingImages", cur.getPosition() + " : " + dateColumn );
             }
         }
-
+        
         void performQueryUsingUserFilter() {
 
 
@@ -316,6 +595,8 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
 
         }
 
+        
+
         Bitmap getNextPic() {
             if ( mCurrIndex < mList.size() ) {
                 String path = mList.get(mCurrIndex);
@@ -350,7 +631,8 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
 
             return null;
         }
-
+        
+       
         /* String getCurrentImgPath() {
             String bucket;
             String date;
