@@ -17,18 +17,24 @@ import android.content.Loader;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.SparseBooleanArray;
 import android.view.Display;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.CheckBox;
@@ -62,7 +68,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
 
     //Map<String, String> mMap = new HashMap<String, String>();
     ArrayList<String> mList = new ArrayList<String>();
-    
+
     /**
      * Grid view holding the images.
      */
@@ -71,23 +77,28 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
      * Image adapter for the grid view.
      */
     private GridImageAdapter imageAdapter1;
-    
+
     /**
-     * Display used for getting the width of the screen. 
+     * Display used for getting the width of the screen.
      */
     private Display display;
+
+    //private int[] mCheck = new int(32);
 
 
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
+        requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         setContentView(R.layout.displaygridview);
         getLoaderManager().initLoader(0, null, this);
-        
+
         Intent intent = getIntent();
         String filter = intent.getExtras().getString("filter");
         mUserFilter = filter;
+
+        setProgressBarIndeterminateVisibility(true);
 
         /*mgridView = (GridView) findViewById(R.id.gridview);
         mgridView.setBackgroundColor(color.darker_gray);
@@ -103,30 +114,42 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                         Toast.LENGTH_SHORT).show();
             }
         });*/
-        
+
         setupViews();
 
     }
-    
+
     /**
      * Setup the grid view.
      */
-	private void setupViews() {
-    	displayImages = (GridView) findViewById(R.id.gridview);
-    	//displayImages.setNumColumns(3);
-    	//displayImages.setClipToPadding(false);
-    	//displayImages.setBackgroundColor(color.holo_red_light);
-    	//displayImages.setVerticalSpacing(1);
-    	//displayImages.setHorizontalSpacing(1);
-    	//displayImages.setOnItemClickListener(DisplayViewsExample.this);
-    	displayImages.setOnItemClickListener(new OnItemClickListener()
+    private void setupViews() {
+        displayImages = (GridView) findViewById(R.id.gridview);
+        DisplayMetrics metrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(metrics);
+
+        //displayImages.setNumColumns(metrics.widthPixels/200);
+        displayImages.setNumColumns(3);
+        //displayImages.setClipToPadding(false);
+        displayImages.setBackgroundColor(Color.DKGRAY);
+        displayImages.setChoiceMode(displayImages.CHOICE_MODE_MULTIPLE);
+        //displayImages.setVerticalSpacing(1);
+        //displayImages.setHorizontalSpacing(1);
+        //displayImages.setOnItemClickListener(DisplayViewsExample.this);
+        displayImages.setOnItemClickListener(new OnItemClickListener()
         {
             public void onItemClick(AdapterView parent,
             View v, int position, long id)
             {
+                v.setBackgroundColor(Color.RED);
+                //v.setPressed(true);
                 Toast.makeText(getBaseContext(),
                         "pic" + (position + 1) + " selected",
                         Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent();
+                intent.setAction(Intent.ACTION_VIEW);
+                Uri imageUri = Uri.parse("file://" + mList.get(position));
+                intent.setDataAndType(imageUri, "image/*");
+                startActivity(intent);
             }
         });
     }
@@ -168,21 +191,21 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
             performQueryUsingUserFilter(data);
             new LoadImagesInBackGround().execute();
             //displayImages.setAdapter(new GridImageAdapter(this));
-            
-        	imageAdapter1 = new GridImageAdapter(getApplicationContext()); 
+
+            imageAdapter1 = new GridImageAdapter(getApplicationContext());
             displayImages.setAdapter(imageAdapter1);
         } else {
             //imagePath = imageUri.getPath();
         }
         //setupImageView();
     }
-    
+
     @Override
     public Object onRetainNonConfigurationInstance() {
-		return null;
-    	
+        return null;
+
     }
-    
+
     private void loadImages() {
         final Object data = getLastNonConfigurationInstance();
     }
@@ -190,7 +213,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
     }
-    
+
     void setupCursor(Cursor cur) {
         if (cur.moveToFirst()) {
             bucketColumn = cur.getColumnIndex(
@@ -208,7 +231,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
             Log.d("ListingImages", cur.getPosition() + " : " + dateColumn );
         }
     }
-    
+
     void performQueryUsingUserFilter(Cursor cur) {
 
 
@@ -296,9 +319,9 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                 Intent intent = new Intent(getBaseContext(), WiFiDirectActivity.class);
                 intent.putStringArrayListExtra("image_paths", mList);
                 startActivity(intent);
-            	return true;
+                return true;
             default:
-            	break;
+                break;
         }
         return false;
     }
@@ -312,7 +335,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
 
     private Intent createShareIntent() {
          //Intent shareIntent = new Intent(Intent.ACTION_SEND);
-    	Intent shareIntent = new Intent();
+        Intent shareIntent = new Intent();
          shareIntent.setAction(Intent.ACTION_SEND_MULTIPLE);
 
 
@@ -329,51 +352,113 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
          return shareIntent;
     }
 
+    class ViewHolder {
+        ImageView imageview;
+        CheckBox checkbox;
+        int id;
+    }
     /**
-     * Adapter for our image files. 
+     * Adapter for our image files.
      *
      */
     class GridImageAdapter extends BaseAdapter {
 
-        private Context mContext; 
+        private Context mContext;
+        private LayoutInflater mInflater;
         private ArrayList<Bitmap> photos = new ArrayList<Bitmap>();
 
-        public GridImageAdapter(Context context) { 
-            mContext = context; 
-        } 
+        public GridImageAdapter(Context context) {
+            mInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+            mContext = context;
+        }
 
-        public void addPhoto(Bitmap photo) { 
-            photos.add(photo); 
-        } 
+        public void addPhoto(Bitmap photo) {
+            photos.add(photo);
+        }
 
-        public int getCount() { 
-            return photos.size(); 
-        } 
+        public int getCount() {
+            return photos.size();
+        }
 
-        public Object getItem(int position) { 
-            return photos.get(position); 
-        } 
+        public Object getItem(int position) {
+            return photos.get(position);
+        }
 
-        public long getItemId(int position) { 
-            return position; 
-        } 
+        public long getItemId(int position) {
+            return position;
+        }
 
-        public View getView(int position, View convertView, ViewGroup parent) { 
-            final ImageView imageView; 
-            if (convertView == null) { 
-                imageView = new ImageView(mContext); 
-            } else { 
-                imageView = (ImageView) convertView; 
-            } 
+        /*public View getView(int position, View convertView, ViewGroup parent) {
+            final ImageView imageView;
+            if (convertView == null) {
+                imageView = new ImageView(mContext);
+            } else {
+                imageView = (ImageView) convertView;
+            }
+            imageView.setLayoutParams(new GridView.LayoutParams(260, 260));
             imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
             imageView.setPadding(4, 4, 4, 4);
             imageView.setImageBitmap(photos.get(position));
-            return imageView; 
-        } 
+            imageView.setBackgroundColor(Color.TRANSPARENT);
+            return imageView;
+        } */
+        public View getView(int position, View convertView, ViewGroup parent) {
+            ViewHolder holder = new ViewHolder();
+            if (convertView == null) {
+                convertView = mInflater.inflate(
+                        R.layout.galleryitem, null);
+                holder.imageview = (ImageView) convertView.findViewById(R.id.thumbImage);
+                holder.checkbox = (CheckBox) convertView.findViewById(R.id.itemCheckBox);
+
+                convertView.setTag(holder);
+            }
+            else {
+                holder = (ViewHolder) convertView.getTag();
+            }
+            holder.checkbox.setId(position);
+            holder.imageview.setId(position);
+            holder.checkbox.setOnClickListener(new OnClickListener() {
+
+                public void onClick(View v) {
+                    // TODO Auto-generated method stub
+                    //ViewHolder holder = (ViewHolder) v.getTag();
+                    SparseBooleanArray checked = displayImages.getCheckedItemPositions();
+                    CheckBox cb = (CheckBox) v;
+                    int id = cb.getId();
+                    if (checked.get(id)){
+                        cb.setChecked(false);
+                        //thumbnailsselection[id] = false;
+                    } else {
+                        cb.setChecked(true);
+                        //thumbnailsselection[id] = true;
+                    }
+                }
+            });
+            holder.imageview.setOnClickListener(new OnClickListener() {
+
+                public void onClick(View v) {
+                    // TODO Auto-generated method stub
+                    int id = v.getId();
+                    Intent intent = new Intent();
+                    intent.setAction(Intent.ACTION_VIEW);
+                    Uri imageUri = Uri.parse("file://" + mList.get(0));
+                    intent.setDataAndType(imageUri, "image/*");
+                    startActivity(intent);
+                }
+            });
+            //holder.imageview.setLayoutParams(new GridView.LayoutParams(260, 260));
+            //holder.imageview.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            //holder.imageview.setPadding(4, 4, 4, 4);
+            holder.imageview.setImageBitmap(photos.get(position));
+            holder.imageview.setBackgroundColor(Color.TRANSPARENT);
+            holder.checkbox.setChecked(true);
+            holder.id = position;
+            return convertView;
+        }
     }
-    
+
     Bitmap getNextPicture(String path) {
-        
+
         ExifInterface intf = null;
         //String data = null;
         Bitmap bitmap = null;
@@ -397,7 +482,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                //LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
                bitmap = BitmapFactory.decodeByteArray(thumbnail, 0, thumbnail.length);
                if (bitmap != null) {
-                   newBitmap = Bitmap.createScaledBitmap(bitmap, 200, 200, true);
+                   newBitmap = Bitmap.createScaledBitmap(bitmap, 240, 240, true);
                    bitmap.recycle();
                    if (newBitmap != null) {
                        return newBitmap;
@@ -408,12 +493,12 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
           } else {
 
            Uri imageUri = null; ;
-           
+
            try {
-        	   imageUri = Uri.parse("file://" + path);
+               imageUri = Uri.parse("file://" + path);
                bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(imageUri));
                if (bitmap != null) {
-                   newBitmap = Bitmap.createScaledBitmap(bitmap, 200, 200, true);
+                   newBitmap = Bitmap.createScaledBitmap(bitmap, 300, 300, true);
                    bitmap.recycle();
                    if (newBitmap != null) {
                        return newBitmap;
@@ -426,10 +511,10 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
 
         return null;
     }
-    
+
     /**
      * Add image(s) to the grid view adapter.
-     * 
+     *
      * @param value Array of Bitmap references
      */
     private void addGridImage(Bitmap... value) {
@@ -438,20 +523,20 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
             imageAdapter1.notifyDataSetChanged();
         }
     }
-    
+
     class LoadImagesInBackGround extends AsyncTask<Object, Bitmap, Object> {
-        
+
         /**
-         * Load images in the background, and display each image on the screen. 
+         * Load images in the background, and display each image on the screen.
          */
         protected String doInBackground(Object... params) {
-            setProgressBarIndeterminateVisibility(true); 
+            setProgressBarIndeterminateVisibility(true);
             for  ( ; mCurrIndex < mList.size() ;mCurrIndex++) {
                 String path = mList.get(mCurrIndex);
                 Bitmap bmp = getNextPicture(path);
-            	publishProgress(bmp);
+                publishProgress(bmp);
             }
-			return null;
+            return null;
         }
         /**
          * Add a new Bitmap in the images grid.
@@ -463,7 +548,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
         }
         /**
          * Set the visibility of the progress bar to false.
-         * 
+         *
          * @see android.os.AsyncTask#onPostExecute(java.lang.Object)
          */
         @Override
@@ -472,7 +557,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
         }
     }
 
-    
+
     public class ImageAdapter extends BaseAdapter
     {
         private Context context;
@@ -509,7 +594,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                 imageView.setScaleType(ImageView.ScaleType.FIT_XY);
                 imageView.setPadding(5, 5, 5, 5);
                 //imageView.setImageDrawable(getNextPic());
-                
+
                 Bitmap bmp = getNextPic();
                 if (bmp != null)
                   imageView.setImageBitmap(bmp);
@@ -537,7 +622,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                 Log.d("ListingImages", cur.getPosition() + " : " + dateColumn );
             }
         }
-        
+
         void performQueryUsingUserFilter() {
 
 
@@ -595,7 +680,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
 
         }
 
-        
+
 
         Bitmap getNextPic() {
             if ( mCurrIndex < mList.size() ) {
@@ -631,8 +716,8 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
 
             return null;
         }
-        
-       
+
+
         /* String getCurrentImgPath() {
             String bucket;
             String date;

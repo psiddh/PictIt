@@ -11,6 +11,7 @@
     <string name="disconnect_peer_button">Disconnect</string>
     <string name="get_file_button">Send >>> </string>
     <string name="empty"></string>
+    <string name="desc"></string>
     <string name="yes">yes</string>
     <string name="no">no</string>
     <string name="client_text">This device will act as a client. Click on Gallery button to pick a local(stored) file</string>
