@@ -377,7 +377,8 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
         }
 
         public int getCount() {
-            return photos.size();
+        	// TBD: Need to check this ?
+            return photos.size() - 1;
         }
 
         public Object getItem(int position) {
