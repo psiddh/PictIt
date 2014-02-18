@@ -667,12 +667,12 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                                // TODO Auto-generated catch block
                                e.printStackTrace();
                        }
-                       /*city = geoDecoder.getAddress(context).get(0).getLocality();
+                       city = geoDecoder.getAddress(context).get(0).getLocality();
                            if(mUserFilter.replace(" ", "").contains(city.replace(" ","")) && !added) {
                                mList.add(path);
                                Uri imageUri = Uri.parse(path);
                                //mImageUris.add(imageUri);
-                        }*/
+                        }
                     }
 
                 //}

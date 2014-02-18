@@ -20,5 +20,15 @@
     <string name="group_owner_text">"Am I the Group Owner? "</string>
     <string name="label_me">ME</string>
     <string name="label_peers">PEERS</string>
+    
+    <string-array name="events_array">
+        <item>Create </item>
+        <item>Delete </item>
+        <item>Pick</item>
+    </string-array>
+    <string name="drawer_open">Open Event drawer</string>
+    <string name="drawer_close">Close Event drawer</string>
+    <string name="action_websearch">Web search</string>
+    <string name="app_not_available">Sorry, there\'s no web browser available</string>
 
 </resources>

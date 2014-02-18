@@ -17,7 +17,7 @@
 
     <!-- Google Play filtering -->
     <uses-feature android:name="android.hardware.wifi.direct" android:required="true"/>
-    
+
 
     <application
         android:allowBackup="true"
@@ -41,12 +41,12 @@
             android:name="com.example.pictit.WiFiDirectActivity"
             android:label="@string/app_name" >
         </activity>
-        
+
                  <!-- Used for transferring files  after a successful connection -->
         <service android:enabled="true" android:name=".FileTransferService" />
-         
+
 
     </application>
 
-    
+
 </manifest>

@@ -3,11 +3,14 @@ package com.example.pictit;
 import java.io.IOException;
 import java.util.ArrayList;
 
+//import com.example.pictit.MainActivity.DrawerItemClickListener;
+
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Message;
 import android.provider.MediaStore;
 import android.app.ActionBar.LayoutParams;
 import android.app.Activity;
@@ -17,21 +20,29 @@ import android.app.ProgressDialog;
 import android.content.CursorLoader;
 import android.content.Intent;
 import android.content.Loader;
+import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.speech.RecognizerIntent;
+import android.support.v4.app.ActionBarDrawerToggle;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.ProgressBar;
 //import android.widget.ShareActionProvider;
 import android.widget.Toast;
@@ -40,21 +51,64 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
 
     private static final int PROGRESS = 0x1;
     private static final int VOICE_RECOGNITION_REQUEST_CODE = 1001;
+    private static final int SHOW_GRID_AFTER_DELAY = 1002;
+
     private ProgressBar mProgress;
     private ProgressDialog progDialog;
     private int mProgressStatus = 0;
     private ImageView mImgView;
     private LinearLayout mLinearLayout;
     private int LIST_ID = 1001;
+    private EditText mEditText;
+
+    private DrawerLayout mDrawerLayout;
+    private ListView mDrawerList;
+    private ActionBarDrawerToggle mDrawerToggle;
+
+    private CharSequence mDrawerTitle;
+    private CharSequence mTitle;
+    private String[] mPlanetTitles;
 
     //private ShareActionProvider mShareActionProvider;
 
-    private Handler mHandler = new Handler();
+    /* The click listner for ListView in the navigation drawer */
+    private class DrawerItemClickListener implements ListView.OnItemClickListener {
+        @Override
+        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+            //selectItem(position);
+        }
+    }
+
+    private Handler mHandler = new Handler() {
+
+        public void handleMessage (Message msg) {
+            switch (msg.what) {
+                case SHOW_GRID_AFTER_DELAY:
+                    //success handling
+                	Bundle b = msg.getData();
+                	String filter = b.getString("filter");
+                	Intent intent = new Intent(getBaseContext(), DisplayViewsExample.class);
+                	intent.putExtra("filter", filter);
+                    startActivity(intent);
+                    break;
+
+                case 0:
+                    //failure handling
+                    break;
+            }
+            mProgress.setVisibility(View.GONE);
+        }
+
+    };
+
+
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
+        mProgress = (ProgressBar) findViewById(R.id.progressBar1);
         // Locate MenuItem with ShareActionProvider
         /*MenuItem item = menu.findItem(R.id.menu_item_share);
         // Fetch and store ShareActionProvider
@@ -78,10 +132,79 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
          return shareIntent;
     }  */
 
+    public void setupDrawers() {
+    	mTitle = mDrawerTitle = "Manage Events";//getTitle();
+        mPlanetTitles = getResources().getStringArray(R.array.events_array);
+        mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        mDrawerList = (ListView) findViewById(R.id.left_drawer);
+
+        // set a custom shadow that overlays the main content when the drawer opens
+        mDrawerLayout.setDrawerShadow(R.drawable.ic_navigation_drawer, GravityCompat.START);
+        //mDrawerLayout.setScrimColor(Color.TRANSPARENT);
+        // set up the drawer's list view with items and click listener
+        mDrawerList.setAdapter(new ArrayAdapter<String>(this,
+                R.layout.drawer_list_item, mPlanetTitles));
+        mDrawerList.setOnItemClickListener(new DrawerItemClickListener());
+        mDrawerList.setBackgroundColor(Color.BLACK);
+
+        // enable ActionBar app icon to behave as action to toggle nav drawer
+        getActionBar().setDisplayHomeAsUpEnabled(true);
+        getActionBar().setHomeButtonEnabled(true);
+
+        // ActionBarDrawerToggle ties together the the proper interactions
+        // between the sliding drawer and the action bar app icon
+        mDrawerToggle = new ActionBarDrawerToggle(
+                this,                  /* host Activity */
+                mDrawerLayout,         /* DrawerLayout object */
+                R.drawable.ic_navigation_drawer,  /* nav drawer image to replace 'Up' caret */
+                R.string.drawer_open,  /* "open drawer" description for accessibility */
+                R.string.drawer_close  /* "close drawer" description for accessibility */
+                ) {
+            public void onDrawerClosed(View view) {
+                getActionBar().setTitle(getTitle());
+                invalidateOptionsMenu(); // creates call to onPrepareOptionsMenu()
+            }
+
+            public void onDrawerOpened(View drawerView) {
+                getActionBar().setTitle(mDrawerTitle);
+                invalidateOptionsMenu(); // creates call to onPrepareOptionsMenu()
+            }
+        };
+        mDrawerLayout.setDrawerListener(mDrawerToggle);
+    }
+
+
+    @Override
+    protected void onPostCreate(Bundle savedInstanceState) {
+        super.onPostCreate(savedInstanceState);
+        // Sync the toggle state after onRestoreInstanceState has occurred.
+        mDrawerToggle.syncState();
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        mDrawerToggle.onConfigurationChanged(newConfig);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Pass the event to ActionBarDrawerToggle, if it returns
+        // true, then it has handled the app icon touch event
+        if (mDrawerToggle.onOptionsItemSelected(item)) {
+          return true;
+        }
+        // Handle your other action bar items...
+
+        return super.onOptionsItemSelected(item);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_main);
+        setupDrawers();
         //testPath();
     	//mLinearLayout = (LinearLayout) findViewById(R.id.linear1);
         //createProgressBar();
@@ -91,9 +214,20 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
             public void onClick(View v) {
                 // Perform action on click
             	//speak();
-            	showGridView("january");
+            	showGridView("february");
             }
         });
+        mEditText = (EditText) findViewById(R.id.editText1);
+        mEditText.setOnTouchListener(new View.OnTouchListener(){
+            public boolean onTouch(View view, MotionEvent motionEvent) {
+                // your code here....
+                //getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+            	mHandler.removeMessages(SHOW_GRID_AFTER_DELAY);
+            	mProgress.setVisibility(View.GONE);
+                return false;
+           }
+        });
+
         getLoaderManager().initLoader(0, null, this);
     }
 
@@ -142,9 +276,16 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
     }
 
     void showGridView(String filter) {
-    	Intent intent = new Intent(getBaseContext(), DisplayViewsExample.class);
-    	intent.putExtra("filter", filter);
-        startActivity(intent);
+    	Message msg = new Message();
+    	Bundle b = new Bundle();
+    	b.putString("filter",filter);
+    	msg.what = SHOW_GRID_AFTER_DELAY;
+    	msg.setData(b);
+    	mEditText.setText(filter);
+    	mEditText.setSelection(mEditText.getText().length());
+    	mProgress.setVisibility(View.VISIBLE);
+    	mHandler.sendMessageDelayed(msg, 3000);
+
     }
     void createProgressBar() {
     	/*mProgress = (ProgressBar) findViewById(R.id.progressBar1);
