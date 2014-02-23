@@ -184,11 +184,14 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
         String imagePath = "";
+        final Cursor d = data;
         if (data != null) {
             mGridCount = data.getCount();
             //mgridView.setAdapter(new ImageAdapter(this,data));
             setupCursor(data);
+
             performQueryUsingUserFilter(data);
+
             new LoadImagesInBackGround().execute();
             //displayImages.setAdapter(new GridImageAdapter(this));
 
@@ -264,7 +267,7 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                 ExifInterface intf = null;
                 //String data = null;
 
-                {
+                /*{
 
                    GeoDecoder geoDecoder = null;
                    String city = null;
@@ -275,13 +278,13 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                            // TODO Auto-generated catch block
                            e.printStackTrace();
                    }
-                   /*city = geoDecoder.getAddress(context).get(0).getLocality();
+                   city = geoDecoder.getAddress(this).get(0).getLocality();
                        if(mUserFilter.replace(" ", "").contains(city.replace(" ","")) && !added) {
                            mList.add(path);
-                           Uri imageUri = Uri.parse(path);
+                           //Uri imageUri = Uri.parse(path);
                            //mImageUris.add(imageUri);
-                    }*/
-                }
+                    }
+                }*/
 
             //}
         } while (cur.moveToNext());

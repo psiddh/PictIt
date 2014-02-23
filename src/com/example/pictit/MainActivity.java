@@ -35,11 +35,13 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.GridView;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -47,11 +49,13 @@ import android.widget.ProgressBar;
 //import android.widget.ShareActionProvider;
 import android.widget.Toast;
 
+
 public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
 
     private static final int PROGRESS = 0x1;
     private static final int VOICE_RECOGNITION_REQUEST_CODE = 1001;
     private static final int SHOW_GRID_AFTER_DELAY = 1002;
+    private static final int GRID_DISPLAY_DELAY = 3000;
 
     private ProgressBar mProgress;
     private ProgressDialog progDialog;
@@ -60,6 +64,7 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
     private LinearLayout mLinearLayout;
     private int LIST_ID = 1001;
     private EditText mEditText;
+    ImageButton mImgButton = null;
 
     private DrawerLayout mDrawerLayout;
     private ListView mDrawerList;
@@ -145,7 +150,7 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
         mDrawerList.setAdapter(new ArrayAdapter<String>(this,
                 R.layout.drawer_list_item, mPlanetTitles));
         mDrawerList.setOnItemClickListener(new DrawerItemClickListener());
-        mDrawerList.setBackgroundColor(Color.BLACK);
+        mDrawerList.setBackgroundColor(0xF5F5DC);
 
         // enable ActionBar app icon to behave as action to toggle nav drawer
         getActionBar().setDisplayHomeAsUpEnabled(true);
@@ -213,8 +218,8 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
         button.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 // Perform action on click
-            	//speak();
-            	showGridView("february");
+            	speak();
+            	//showGridView("Sonoma");
             }
         });
         mEditText = (EditText) findViewById(R.id.editText1);
@@ -224,9 +229,36 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
                 //getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
             	mHandler.removeMessages(SHOW_GRID_AFTER_DELAY);
             	mProgress.setVisibility(View.GONE);
+            	mImgButton.setVisibility(View.VISIBLE);
                 return false;
            }
         });
+        mImgButton = (ImageButton) findViewById(R.id.imageButton);
+        OnClickListener mClkListener =new OnClickListener() {
+    	    public void onClick(View button) {
+	    	   if (button.isSelected()){
+	               button.setSelected(false);
+
+	           } else {
+	        	   mImgButton.setSelected(false);
+	               //put all the other buttons you might want to disable here...
+	               button.setSelected(true);
+
+	               mHandler.removeMessages(SHOW_GRID_AFTER_DELAY);
+
+		           	Message msg = new Message();
+		           	Bundle b = new Bundle();
+		           	String str = mEditText.getText().toString();
+		           	b.putString("filter",mEditText.getText().toString());
+		           	msg.what = SHOW_GRID_AFTER_DELAY;
+		           	msg.setData(b);
+		           	mHandler.sendMessage(msg);
+	           }
+    	    }
+
+        };
+
+       mImgButton.setOnClickListener(mClkListener);
 
         getLoaderManager().initLoader(0, null, this);
     }
@@ -276,6 +308,11 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
     }
 
     void showGridView(String filter) {
+
+       // Just in case, remove any previously queued messages
+       // TBD: Revisit this later?
+       mHandler.removeMessages(SHOW_GRID_AFTER_DELAY);
+
     	Message msg = new Message();
     	Bundle b = new Bundle();
     	b.putString("filter",filter);
@@ -284,7 +321,7 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
     	mEditText.setText(filter);
     	mEditText.setSelection(mEditText.getText().length());
     	mProgress.setVisibility(View.VISIBLE);
-    	mHandler.sendMessageDelayed(msg, 3000);
+        mHandler.sendMessageDelayed(msg, GRID_DISPLAY_DELAY);
 
     }
     void createProgressBar() {
@@ -293,7 +330,6 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
         progDialog = new ProgressDialog(this);
         progDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         //progDialog.setMax(maxBarValue);
-        progDialog.setMessage("I love Shrumpsaaa:");
         progDialog.show();
 
         // Start lengthy operation in a background thread
