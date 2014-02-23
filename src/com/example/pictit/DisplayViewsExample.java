@@ -26,6 +26,7 @@ import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.Pair;
 import android.util.SparseBooleanArray;
 import android.view.Display;
 import android.view.LayoutInflater;
@@ -45,7 +46,7 @@ import android.widget.ProgressBar;
 import android.widget.ShareActionProvider;
 import android.widget.Toast;
 import android.widget.AdapterView.OnItemClickListener;
-public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cursor>
+public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cursor>, LogUtils
 {
     int bucketColumn = 0;
 
@@ -55,10 +56,16 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
 
     int dataColumn = 0;
     int mCurrIndex = 0;
+
     private GridView mgridView;
     private int mGridCount = 0;
     Calendar mCalendar = Calendar.getInstance();
+
+    // Set of Filters to compare against
     String[] mMonthNames = {"January", "february","March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
+
+    // Last WeekEnd
+    String mLastWeekEnd = "Last Weekend";
 
     private ShareActionProvider mShareActionProvider;
 
@@ -255,11 +262,31 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
                     mList.add(path);
                     //Uri imageUri = Uri.parse(path);
                     //mImageUris.add(imageUri);
-                    File photo = new File(android.os.Environment.DIRECTORY_PICTURES
-                            , path);  // .getExternalStorageDirectory()
+                    //File photo = new File(android.os.Environment.DIRECTORY_PICTURES
+                      //      , path);  // .getExternalStorageDirectory()
                     //mImageUris.add(Uri.fromFile(photo));
                     added = true;
                     //mMap.put(path, mMonthNames[monthOfYear]);
+                }
+
+                if (mUserFilter.toLowerCase().contains(mLastWeekEnd.toLowerCase())) {
+                    DateRangeManager range = new DateRangeManager();
+
+
+                    Pair<Long, Long> p = range.getLastWeekEnd();
+
+                    if (DEBUG) {
+                      String date2 = "" + mCalendar.get(Calendar.DAY_OF_MONTH) + ":" + mCalendar.get(Calendar.MONTH) + ":" + mCalendar.get(Calendar.YEAR);
+                      String time2 = "" + mCalendar.get(Calendar.HOUR_OF_DAY) + ":" + mCalendar.get(Calendar.MINUTE) + ":" + mCalendar.get(Calendar.SECOND);
+
+                      Log.d(" CurrentDate " , date2 + " " + time2);
+                    }
+
+                    if ((dateinMilliSec >= p.first) && (dateinMilliSec <= p.second)) {
+                        mList.add(path);
+                        added = true;
+                    }
+
                 } else {
                     //Log.i("monthOfYear  : "," mMonthNames[monthOfYear]");
                 }
@@ -380,8 +407,8 @@ public class DisplayViewsExample extends Activity  implements LoaderCallbacks<Cu
         }
 
         public int getCount() {
-        	// TBD: Need to check this ?
-            return photos.size() - 1;
+            // TBD: Need to check this ?
+            return photos.size();
         }
 
         public Object getItem(int position) {
