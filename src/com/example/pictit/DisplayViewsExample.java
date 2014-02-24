@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 import android.R.color;
@@ -57,10 +58,9 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
     int dataColumn = 0;
     int mCurrIndex = 0;
+    int mGridCount = 0;
 
-    private GridView mgridView;
-    private int mGridCount = 0;
-    Calendar mCalendar = Calendar.getInstance();
+    Calendar mCalendar = Calendar.getInstance((Locale.getDefault()));
 
     // Set of Filters to compare against
     String[] mMonthNames = {"January", "february","March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
@@ -250,10 +250,10 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     void performQueryUsingUserFilter(Cursor cur) {
         do {
             boolean added = false;
-            String date = cur.getString(dateColumn);
+            String curDate = cur.getString(dateColumn);
             String path = cur.getString(dataColumn);
 
-            long dateinMilliSec = Long.parseLong(date);
+            long dateinMilliSec = Long.parseLong(curDate);
             mCalendar.setTimeInMillis(dateinMilliSec);
             int monthOfYear = mCalendar.get(Calendar.MONTH);
             //if (monthOfYear >= 0 && monthOfYear <= 11 ) {
@@ -264,29 +264,20 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 if (mUserFilter.toLowerCase().contains(mLastWeekEnd.toLowerCase())) {
                     DateRangeManager range = new DateRangeManager();
                     Pair<Long, Long> p = range.getLastWeekEnd();
-
-                    if (DEBUG) {
-                      String date2 = "" + mCalendar.get(Calendar.DAY_OF_MONTH) + ":" + mCalendar.get(Calendar.MONTH) + ":" + mCalendar.get(Calendar.YEAR);
-                      String time2 = "" + mCalendar.get(Calendar.HOUR_OF_DAY) + ":" + mCalendar.get(Calendar.MINUTE) + ":" + mCalendar.get(Calendar.SECOND);
-
-                      Log.d(TAG , date2 + " " + time2);
-                    }
+                    range.printDateAndTime(mCalendar);
 
                     if ((dateinMilliSec >= p.first) && (dateinMilliSec <= p.second)) {
-                        added = addtoListIfNotFound(path);
+                      if (DEBUG) Log.d(TAG, "****** Added ********* ");
+                      range.printDateAndTime(mCalendar);
+                      if (DEBUG) Log.d(TAG, "****** Added ********* ");
+                      added = addtoListIfNotFound(path);
                     }
-
                 } if (mUserFilter.toLowerCase().contains(mToday.toLowerCase())) {
-                    // TBD: Need to Refactor this code with the above
+                    // TBD: Need to Re-factor this code with the above
                     DateRangeManager range = new DateRangeManager();
                     Pair<Long, Long> p = range.getToday();
 
-                    if (DEBUG) {
-                      String date2 = "" + mCalendar.get(Calendar.DAY_OF_MONTH) + ":" + mCalendar.get(Calendar.MONTH) + ":" + mCalendar.get(Calendar.YEAR);
-                      String time2 = "" + mCalendar.get(Calendar.HOUR_OF_DAY) + ":" + mCalendar.get(Calendar.MINUTE) + ":" + mCalendar.get(Calendar.SECOND);
-
-                      Log.d(TAG , date2 + " " + time2);
-                    }
+                    range.printDateAndTime(mCalendar);
 
                     if ((dateinMilliSec >= p.first) && (dateinMilliSec <= p.second)) {
                         added = addtoListIfNotFound(path);
