@@ -1,6 +1,7 @@
 package com.example.pictit;
 
 import java.util.Calendar;
+import java.util.Locale;
 
 import android.util.Log;
 import android.util.Pair;
@@ -8,16 +9,18 @@ import android.util.Pair;
 public class DateRangeManager implements LogUtils{
 
     Calendar Cal = null;
+    private int mCurDayOfWeek = 0;
 	public DateRangeManager(){
+		// TBD: Timezone issues ?
 		//create Calendar instance
-		Cal = Calendar.getInstance();
+		Cal = Calendar.getInstance((Locale.getDefault()));
+		mCurDayOfWeek = Cal.get(Calendar.DAY_OF_WEEK);
 	};
 
 	public Pair<Long,Long> getLastWeekEnd()
 	{
 		int offset = 1;
-		int cur_day_of_week = Cal.get(Calendar.DAY_OF_WEEK);
-		switch (cur_day_of_week) {
+		switch (mCurDayOfWeek) {
 		case 1: // Sunday
 			offset = -9;
 			break;
@@ -27,12 +30,12 @@ public class DateRangeManager implements LogUtils{
 		case 5: // Thursday
 		case 6: // Friday
 		case 7: // Saturday
-			offset = (cur_day_of_week + 1) * -1;
+			offset = (mCurDayOfWeek + 1) * -1;
 			break;
 		}
-		int start_of_prev_weekend = cur_day_of_week + offset;
+		int start_of_prev_weekend = mCurDayOfWeek + offset;
 
-		Calendar prev_weekend_start = Calendar.getInstance();
+		Calendar prev_weekend_start = Calendar.getInstance((Locale.getDefault()));
 		// reset hour, minutes, seconds and millis
 		prev_weekend_start.set(Calendar.HOUR_OF_DAY, 0);
 		prev_weekend_start.set(Calendar.MINUTE, 0);
@@ -58,8 +61,22 @@ public class DateRangeManager implements LogUtils{
 		}
 
 		Long val2 = prev_weekend_start.getTimeInMillis();
-		Pair <Long,Long>p =new Pair<Long, Long>(val1,val2);
-		return p;
+		return new Pair<Long, Long>(val1,val2);
+	}
+
+	public Pair<Long,Long> getToday()
+	{
+	   Long val1, val2;
+	    Calendar today = Calendar.getInstance((Locale.getDefault()));
+		// reset hour, minutes, seconds and millis
+		today.set(Calendar.HOUR_OF_DAY, 0);
+		today.set(Calendar.MINUTE, 0);
+		today.set(Calendar.SECOND, 0);
+		today.set(Calendar.MILLISECOND, 0);
+		val1 = today.getTimeInMillis();
+		today.add(Calendar.DATE, 1);
+		val2 = today.getTimeInMillis();
+		return new Pair<Long, Long>(val1,val2);
 	}
 
 	@Override
