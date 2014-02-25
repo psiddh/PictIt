@@ -111,13 +111,34 @@ Geocoder geocoder;
 	String city = addresses.get(0).getAddressLine(1);
 	String country = addresses.get(0).getAddressLine(2);
 	String local = addresses.get(0).getLocality();
-	Log.i("address : " , address + "  " + country + "  " + city);
+	Log.i("address : " , address + "  " + country + "  " + city + " " + local);
 } catch (IOException e) {
 	// TODO Auto-generated catch block
 	e.printStackTrace();
 }
 
 	return addresses;
+}
+
+public String  getCompleteAddress(Context context){
+Geocoder geocoder;
+	List<Address> addresses = null;
+	String completeAdress = null;
+	geocoder = new Geocoder(context, Locale.getDefault());
+	try {
+	addresses = geocoder.getFromLocation(getLat(), getLong(), 1);
+    // TBD: Not efficient
+	completeAdress += addresses.get(0).getAddressLine(0) + ",";
+	completeAdress += addresses.get(0).getAddressLine(1) + ",";
+	completeAdress += addresses.get(0).getAddressLine(2) + ",";
+	completeAdress +=addresses.get(0).getLocality();
+	Log.i("address : " , completeAdress);
+} catch (IOException e) {
+	// TODO Auto-generated catch block
+	e.printStackTrace();
+}
+
+	return completeAdress;
 }
 
 }

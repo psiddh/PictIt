@@ -8,15 +8,12 @@ import java.util.ArrayList;
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.provider.MediaStore;
-import android.app.ActionBar.LayoutParams;
 import android.app.Activity;
 import android.app.SearchManager;
 import android.app.LoaderManager.LoaderCallbacks;
-import android.app.ProgressDialog;
 import android.content.CursorLoader;
 import android.content.Intent;
 import android.content.Loader;
@@ -24,7 +21,6 @@ import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.speech.RecognizerIntent;
 import android.support.v4.app.ActionBarDrawerToggle;
@@ -40,29 +36,19 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.GridView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
-//import android.widget.ShareActionProvider;
 import android.widget.Toast;
 
-
 public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
-
-    private static final int PROGRESS = 0x1;
     private static final int VOICE_RECOGNITION_REQUEST_CODE = 1001;
     private static final int SHOW_GRID_AFTER_DELAY = 1002;
     private static final int GRID_DISPLAY_DELAY = 3000;
 
     private ProgressBar mProgress;
-    private ProgressDialog progDialog;
-    private int mProgressStatus = 0;
-    private ImageView mImgView;
-    private LinearLayout mLinearLayout;
-    private int LIST_ID = 1001;
     private EditText mEditText;
     ImageButton mImgButton = null;
 
@@ -71,11 +57,9 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
     private ActionBarDrawerToggle mDrawerToggle;
 
     private CharSequence mDrawerTitle;
-    private CharSequence mTitle;
     private String[] mPlanetTitles;
 
     //private ShareActionProvider mShareActionProvider;
-
     /* The click listner for ListView in the navigation drawer */
     private class DrawerItemClickListener implements ListView.OnItemClickListener {
         @Override
@@ -105,9 +89,6 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
         }
 
     };
-
-
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -178,7 +159,6 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
         mDrawerLayout.setDrawerListener(mDrawerToggle);
     }
 
-
     @Override
     protected void onPostCreate(Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
@@ -200,7 +180,6 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
           return true;
         }
         // Handle your other action bar items...
-
         return super.onOptionsItemSelected(item);
     }
 
@@ -248,7 +227,6 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
 
 		           	Message msg = new Message();
 		           	Bundle b = new Bundle();
-		           	String str = mEditText.getText().toString();
 		           	b.putString("filter",mEditText.getText().toString());
 		           	msg.what = SHOW_GRID_AFTER_DELAY;
 		           	msg.setData(b);
@@ -259,8 +237,7 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
         };
 
        mImgButton.setOnClickListener(mClkListener);
-
-        getLoaderManager().initLoader(0, null, this);
+       getLoaderManager().initLoader(0, null, this);
     }
 
     @Override
@@ -289,10 +266,9 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-    	String imagePath = "";
+        //String imagePath = "";
     	if (data != null) {
             //int columnIndex = data.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
-
             //data.moveToFirst();
             //imagePath = data.getString(columnIndex);
             //enumeratePics(data);
@@ -323,30 +299,6 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
     	mProgress.setVisibility(View.VISIBLE);
         mHandler.sendMessageDelayed(msg, GRID_DISPLAY_DELAY);
 
-    }
-    void createProgressBar() {
-    	/*mProgress = (ProgressBar) findViewById(R.id.progressBar1);
-    	//mImgView = (ImageView) findViewById(R.id.imageView1);
-        progDialog = new ProgressDialog(this);
-        progDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-        //progDialog.setMax(maxBarValue);
-        progDialog.show();
-
-        // Start lengthy operation in a background thread
-        new Thread(new Runnable() {
-            public void run() {
-                while (mProgressStatus < 100) {
-                    mProgressStatus = doWork();
-
-                    // Update the progress bar
-                    mHandler.post(new Runnable() {
-                        public void run() {
-                        	progDialog.setProgress(mProgressStatus);
-                        }
-                    });
-                }
-            }
-        }).start();*/
     }
 
     void testPath(String path) {
@@ -467,22 +419,8 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
       Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
      }
 
-    int doWork() {
-    	try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-    	mProgressStatus+=10;
-    	return mProgressStatus;
-    }
-
     void enumeratePics(Cursor cur) {
-
-
         Log.d("ListingImages"," query count= "+cur.getCount());
-
         if (cur.moveToFirst()) {
             String bucket;
             String date;
@@ -490,7 +428,6 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
             String data;
             int bucketColumn = cur.getColumnIndex(
                 MediaStore.Images.Media.BUCKET_DISPLAY_NAME);
-
             int dateColumn = cur.getColumnIndex(
                 MediaStore.Images.Media.DATE_TAKEN);
 
@@ -499,10 +436,7 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
 
             int dataColumn = cur.getColumnIndex(
                     MediaStore.Images.Media.DATA);
-
             Log.d("ListingImages", cur.getPosition() + " : " + dateColumn );
-
-
             do {
                 // Get the field values
                 bucket = cur.getString(bucketColumn);
@@ -516,7 +450,6 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
                 //if (!bucket.equals("Camera"))
                   testPath(data);
             } while (cur.moveToNext());
-
         }
     }
 

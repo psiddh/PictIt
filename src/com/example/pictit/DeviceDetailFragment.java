@@ -15,12 +15,9 @@ package com.example.pictit;
  * limitations under the License.
  */
 
-
-
 import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.media.MediaScannerConnection;
 import android.net.Uri;

@@ -1,14 +1,10 @@
 package com.example.pictit;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 
-import android.R.color;
 import android.app.Activity;
 import android.app.LoaderManager.LoaderCallbacks;
 import android.content.Context;
@@ -19,7 +15,6 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.graphics.drawable.BitmapDrawable;
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -29,7 +24,6 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Pair;
 import android.util.SparseBooleanArray;
-import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -42,41 +36,38 @@ import android.widget.BaseAdapter;
 import android.widget.CheckBox;
 import android.widget.GridView;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.ShareActionProvider;
 import android.widget.Toast;
 import android.widget.AdapterView.OnItemClickListener;
 public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cursor>, LogUtils
 {
     private String TAG = "Pickit/DisplayView";
+    private boolean mSupportGeoCoder = false;
+
     int bucketColumn = 0;
-
     int dateColumn = 0;
-
     int titleColumn = 0;
-
     int dataColumn = 0;
     int mCurrIndex = 0;
     int mGridCount = 0;
 
     Calendar mCalendar = Calendar.getInstance((Locale.getDefault()));
-
-    // Set of Filters to compare against
-    String[] mMonthNames = {"January", "february","March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
-
-    // Last WeekEnd
-    String mLastWeekEnd = "Last Weekend";
-
-    // Today
-    String mToday = "Today";
-
     private ShareActionProvider mShareActionProvider;
 
-    ArrayList<Uri> mImageUris = new ArrayList<Uri>();
+    // ************************************************************************
+    // Set of Filters to compare against
+    String[] mMonthNamesFilter = {"January", "february","March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
+    // Last WeekEnd
+    String mLastWeekEndFilter = "Last Weekend";
+    // Today
+    String mTodayFilter = "Today";
+
+    //        Vs
 
     String mUserFilter;
+    // ************************************************************************
 
+    ArrayList<Uri> mImageUris = new ArrayList<Uri>();
     //Map<String, String> mMap = new HashMap<String, String>();
     ArrayList<String> mList = new ArrayList<String>();
 
@@ -87,15 +78,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     /**
      * Image adapter for the grid view.
      */
-    private GridImageAdapter imageAdapter1;
-
-    /**
-     * Display used for getting the width of the screen.
-     */
-    private Display display;
-
-    //private int[] mCheck = new int(32);
-
+    private GridImageAdapter imageAdapter;
 
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -178,9 +161,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
         // Get the base URI for the People table in the Contacts content provider.
         Uri images = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
-        String test = images.toString();
-
-        test = MediaStore.Images.Media.INTERNAL_CONTENT_URI.toString();
 
         // Make the query.
         CursorLoader cur = new CursorLoader(this, images,
@@ -201,8 +181,8 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             new LoadImagesInBackGround().execute();
             //displayImages.setAdapter(new GridImageAdapter(this));
 
-            imageAdapter1 = new GridImageAdapter(getApplicationContext());
-            displayImages.setAdapter(imageAdapter1);
+            imageAdapter = new GridImageAdapter(getApplicationContext());
+            displayImages.setAdapter(imageAdapter);
         } else {
             //imagePath = imageUri.getPath();
         }
@@ -257,11 +237,12 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             mCalendar.setTimeInMillis(dateinMilliSec);
             int monthOfYear = mCalendar.get(Calendar.MONTH);
             //if (monthOfYear >= 0 && monthOfYear <= 11 ) {
-                if(mUserFilter.toLowerCase().contains(mMonthNames[monthOfYear].toLowerCase())) {
+            // TBD: These checks have to much much smarter.. They are way too dumb for my liking
+                if(mUserFilter.toLowerCase().contains(mMonthNamesFilter[monthOfYear].toLowerCase())) {
                     added = addtoListIfNotFound(path);
                 }
 
-                if (mUserFilter.toLowerCase().contains(mLastWeekEnd.toLowerCase())) {
+                if (mUserFilter.toLowerCase().contains(mLastWeekEndFilter.toLowerCase())) {
                     DateRangeManager range = new DateRangeManager();
                     Pair<Long, Long> p = range.getLastWeekEnd();
                     range.printDateAndTime(mCalendar);
@@ -272,7 +253,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                       if (DEBUG) Log.d(TAG, "****** Added ********* ");
                       added = addtoListIfNotFound(path);
                     }
-                } if (mUserFilter.toLowerCase().contains(mToday.toLowerCase())) {
+                } if (mUserFilter.toLowerCase().contains(mTodayFilter.toLowerCase())) {
                     // TBD: Need to Re-factor this code with the above
                     DateRangeManager range = new DateRangeManager();
                     Pair<Long, Long> p = range.getToday();
@@ -286,13 +267,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                     if (WARN) Log.i(TAG, "Ooops! No results");
                 }
 
-                ExifInterface intf = null;
-                //String data = null;
-
-                /*{
-
+                // Following block to 'enable / disable search by places'
+                if (mSupportGeoCoder)  // TBD: Make this a shared pref ?
+                {
                    GeoDecoder geoDecoder = null;
-                   String city = null;
+                   String addr = null;
                    try {
                            geoDecoder = new GeoDecoder(new ExifInterface(path));
                            if (!geoDecoder.isValid()) continue;
@@ -300,15 +279,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                            // TODO Auto-generated catch block
                            e.printStackTrace();
                    }
-                   city = geoDecoder.getAddress(this).get(0).getLocality();
-                       if(mUserFilter.replace(" ", "").contains(city.replace(" ","")) && !added) {
-                           mList.add(path);
-                           //Uri imageUri = Uri.parse(path);
-                           //mImageUris.add(imageUri);
-                    }
-                }*/
-
-            //}
+                   addr = geoDecoder.getCompleteAddress(this);
+                   if(mUserFilter.replace(" ", "").contains(addr.replace(" ","")) && !added) {
+                       addtoListIfNotFound(path);
+                   }
+                }
         } while (cur.moveToNext());
     }
 
@@ -378,7 +353,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
      *
      */
     class GridImageAdapter extends BaseAdapter {
-        private Context mContext ;
         private LayoutInflater mInflater;
         private ArrayList<Bitmap> photos = new ArrayList<Bitmap>();
 
@@ -535,8 +509,8 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
      */
     private void addGridImage(Bitmap... value) {
         for (Bitmap image : value) {
-            imageAdapter1.addPhoto(image);
-            imageAdapter1.notifyDataSetChanged();
+            imageAdapter.addPhoto(image);
+            imageAdapter.notifyDataSetChanged();
         }
     }
 

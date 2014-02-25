@@ -21,6 +21,7 @@ public class DateRangeManager implements LogUtils{
 	public Pair<Long,Long> getLastWeekEnd()
 	{
 		int offset = 1;
+		// TBD: Ah ! This may vary based on different world cultures
 		switch (mCurDayOfWeek) {
 		case 1: // Sunday
 			offset = -9;
@@ -46,7 +47,7 @@ public class DateRangeManager implements LogUtils{
 
 		this.printDateAndTime(prev_weekend_start);
 		Long val1 = prev_weekend_start.getTimeInMillis();
-		// Compute from Saturday earliest morning (12:00 AM i;e Friday Midnight) till Monday earliest morning (i;e Sunday Morning)
+		// Compute from Saturday earliest morning (12:00 AM i;e Friday Midnight) till Monday earliest morning (i;e Sunday night)
 		prev_weekend_start.add(Calendar.DATE, 2);
 		this.printDateAndTime(prev_weekend_start);
 
