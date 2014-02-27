@@ -20,11 +20,11 @@ public class DateRangeManager implements LogUtils{
 
 	public Pair<Long,Long> getLastWeekEnd()
 	{
-		int offset = 1;
+		int offset = 0;
 		// TBD: Ah ! This may vary based on different world cultures
 		switch (mCurDayOfWeek) {
 		case 1: // Sunday
-			offset = -9;
+			offset = -8;
 			break;
 		case 2: // Monday
 		case 3: // Tuesday
@@ -32,10 +32,10 @@ public class DateRangeManager implements LogUtils{
 		case 5: // Thursday
 		case 6: // Friday
 		case 7: // Saturday
-			offset = (mCurDayOfWeek + 2) * -1;
+			offset = mCurDayOfWeek  * -1;
 			break;
 		}
-		int start_of_prev_weekend = mCurDayOfWeek + offset;
+		int start_of_prev_weekend =  offset;
 
 		Calendar prev_weekend_start = Calendar.getInstance((Locale.getDefault()));
 		// reset hour, minutes, seconds and millis

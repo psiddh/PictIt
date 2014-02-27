@@ -3,8 +3,6 @@ package com.example.pictit;
 import java.io.IOException;
 import java.util.ArrayList;
 
-//import com.example.pictit.MainActivity.DrawerItemClickListener;
-
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Bundle;
@@ -119,7 +117,7 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
     }  */
 
     public void setupDrawers() {
-    	mTitle = mDrawerTitle = "Manage Events";//getTitle();
+        mDrawerTitle = "Manage Events";//getTitle();
         mPlanetTitles = getResources().getStringArray(R.array.events_array);
         mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
         mDrawerList = (ListView) findViewById(R.id.left_drawer);

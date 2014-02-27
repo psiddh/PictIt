@@ -62,6 +62,9 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     // Today
     String mTodayFilter = "Today";
 
+    // Place
+    String mPlaceFilter = "Place";
+
     //        Vs
 
     String mUserFilter;
@@ -229,15 +232,14 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
     void performQueryUsingUserFilter(Cursor cur) {
         do {
-            boolean added = false;
-            String curDate = cur.getString(dateColumn);
-            String path = cur.getString(dataColumn);
-
-            long dateinMilliSec = Long.parseLong(curDate);
-            mCalendar.setTimeInMillis(dateinMilliSec);
-            int monthOfYear = mCalendar.get(Calendar.MONTH);
-            //if (monthOfYear >= 0 && monthOfYear <= 11 ) {
-            // TBD: These checks have to much much smarter.. They are way too dumb for my liking
+	            boolean added = false;
+	            String curDate = cur.getString(dateColumn);
+	            String path = cur.getString(dataColumn);
+	            long dateinMilliSec = Long.parseLong(curDate);
+	            mCalendar.setTimeInMillis(dateinMilliSec);
+	            int monthOfYear = mCalendar.get(Calendar.MONTH);
+	            //if (monthOfYear >= 0 && monthOfYear <= 11 ) {
+	            // TBD: These checks have to much much smarter.. They are way too dumb for my liking
                 if(mUserFilter.toLowerCase().contains(mMonthNamesFilter[monthOfYear].toLowerCase())) {
                     added = addtoListIfNotFound(path);
                 }
@@ -268,8 +270,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 }
 
                 // Following block to 'enable / disable search by places'
-                if (mSupportGeoCoder)  // TBD: Make this a shared pref ?
-                {
+                if ((mSupportGeoCoder) && (mUserFilter.toLowerCase().contains(mPlaceFilter.toLowerCase()))) {
                    GeoDecoder geoDecoder = null;
                    String addr = null;
                    try {
@@ -353,6 +354,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
      *
      */
     class GridImageAdapter extends BaseAdapter {
+        private Context mContext;
         private LayoutInflater mInflater;
         private ArrayList<Bitmap> photos = new ArrayList<Bitmap>();
 
