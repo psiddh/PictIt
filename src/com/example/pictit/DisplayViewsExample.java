@@ -3,6 +3,7 @@ package com.example.pictit;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Locale;
 
 import android.app.Activity;
@@ -15,6 +16,7 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.location.Address;
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -42,7 +44,8 @@ import android.widget.AdapterView.OnItemClickListener;
 public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cursor>, LogUtils
 {
     private String TAG = "Pickit/DisplayView";
-    private boolean mSupportGeoCoder = false;
+    // CPU & connectivity data intensive operation guarded by this flag
+    private boolean mSupportGeoCoder = true;
 
     int bucketColumn = 0;
     int dateColumn = 0;
@@ -180,10 +183,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         if (data != null) {
             mGridCount = data.getCount();
             setupCursor(data);
-            performQueryUsingUserFilter(data);
-            new LoadImagesInBackGround().execute();
-            //displayImages.setAdapter(new GridImageAdapter(this));
-
+            new LoadImagesInBackGround(data, this).execute();
             imageAdapter = new GridImageAdapter(getApplicationContext());
             displayImages.setAdapter(imageAdapter);
         } else {
@@ -218,74 +218,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
             Log.d(TAG, cur.getPosition() + " : " + dateColumn );
         }
-    }
-
-    boolean addtoListIfNotFound(String path) {
-       if (!mList.contains(path)) {
-            mList.add(path);
-            return true;
-        }
-
-        if (DEBUG) Log.d(TAG, "Path : " + path + " already found!");
-        return false;
-    }
-
-    void performQueryUsingUserFilter(Cursor cur) {
-        do {
-	            boolean added = false;
-	            String curDate = cur.getString(dateColumn);
-	            String path = cur.getString(dataColumn);
-	            long dateinMilliSec = Long.parseLong(curDate);
-	            mCalendar.setTimeInMillis(dateinMilliSec);
-	            int monthOfYear = mCalendar.get(Calendar.MONTH);
-	            //if (monthOfYear >= 0 && monthOfYear <= 11 ) {
-	            // TBD: These checks have to much much smarter.. They are way too dumb for my liking
-                if(mUserFilter.toLowerCase().contains(mMonthNamesFilter[monthOfYear].toLowerCase())) {
-                    added = addtoListIfNotFound(path);
-                }
-
-                if (mUserFilter.toLowerCase().contains(mLastWeekEndFilter.toLowerCase())) {
-                    DateRangeManager range = new DateRangeManager();
-                    Pair<Long, Long> p = range.getLastWeekEnd();
-                    range.printDateAndTime(mCalendar);
-
-                    if ((dateinMilliSec >= p.first) && (dateinMilliSec <= p.second)) {
-                      if (DEBUG) Log.d(TAG, "****** Added ********* ");
-                      range.printDateAndTime(mCalendar);
-                      if (DEBUG) Log.d(TAG, "****** Added ********* ");
-                      added = addtoListIfNotFound(path);
-                    }
-                } if (mUserFilter.toLowerCase().contains(mTodayFilter.toLowerCase())) {
-                    // TBD: Need to Re-factor this code with the above
-                    DateRangeManager range = new DateRangeManager();
-                    Pair<Long, Long> p = range.getToday();
-
-                    range.printDateAndTime(mCalendar);
-
-                    if ((dateinMilliSec >= p.first) && (dateinMilliSec <= p.second)) {
-                        added = addtoListIfNotFound(path);
-                    }
-                } else {
-                    if (WARN) Log.i(TAG, "Ooops! No results");
-                }
-
-                // Following block to 'enable / disable search by places'
-                if ((mSupportGeoCoder) && (mUserFilter.toLowerCase().contains(mPlaceFilter.toLowerCase()))) {
-                   GeoDecoder geoDecoder = null;
-                   String addr = null;
-                   try {
-                           geoDecoder = new GeoDecoder(new ExifInterface(path));
-                           if (!geoDecoder.isValid()) continue;
-                   } catch (IOException e) {
-                           // TODO Auto-generated catch block
-                           e.printStackTrace();
-                   }
-                   addr = geoDecoder.getCompleteAddress(this);
-                   if(mUserFilter.replace(" ", "").contains(addr.replace(" ","")) && !added) {
-                       addtoListIfNotFound(path);
-                   }
-                }
-        } while (cur.moveToNext());
     }
 
     @Override
@@ -449,60 +381,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         }
     }
 
-    Bitmap getNextPicture(String path) {
 
-        ExifInterface intf = null;
-        //String data = null;
-        Bitmap bitmap = null;
-        Bitmap newBitmap = null;
-
-        try {
-            intf = new ExifInterface(path);
-        } catch(IOException e) {
-            e.printStackTrace();
-        }
-
-        if(intf == null) {
-            //File doesn't exist or isn't an image
-        }
-
-        String dateString = intf.getAttribute(ExifInterface.TAG_DATETIME);
-           //Log.d("PATH : ", data);
-           Log.d(TAG, dateString);
-        if (intf.hasThumbnail()) {
-               byte[] thumbnail = intf.getThumbnail();
-               //LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-               bitmap = BitmapFactory.decodeByteArray(thumbnail, 0, thumbnail.length);
-               if (bitmap != null) {
-                   newBitmap = Bitmap.createScaledBitmap(bitmap, 240, 240, true);
-                   bitmap.recycle();
-                   if (newBitmap != null) {
-                       return newBitmap;
-                   }
-               }
-               //BitmapDrawable bmd = new BitmapDrawable(getResources(),bmpImg);
-               return bitmap;
-          } else {
-
-           Uri imageUri = null; ;
-
-           try {
-               imageUri = Uri.parse("file://" + path);
-               bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(imageUri));
-               if (bitmap != null) {
-                   newBitmap = Bitmap.createScaledBitmap(bitmap, 300, 300, true);
-                   bitmap.recycle();
-                   if (newBitmap != null) {
-                       return newBitmap;
-                   }
-               }
-           } catch (IOException e) {
-               //Error fetching image, try to recover
-           }
-         }
-
-        return null;
-    }
 
     /**
      * Add image(s) to the grid view adapter.
@@ -516,18 +395,42 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         }
     }
 
+    boolean addtoListIfNotFound(String path) {
+        if (!mList.contains(path)) {
+             mList.add(path);
+             return true;
+         }
+
+         if (DEBUG) Log.d(TAG, "Path : " + path + " already found!");
+         return false;
+     }
+
     class LoadImagesInBackGround extends AsyncTask<Object, Bitmap, Object> {
 
+        private Cursor mCursor;
+        private Context mContext;
+
+        LoadImagesInBackGround(Cursor cur, Context context) {
+            mCursor = cur;
+            mContext = context;
+        }
         /**
          * Load images in the background, and display each image on the screen.
          */
         protected String doInBackground(Object... params) {
             setProgressBarIndeterminateVisibility(true);
-            for  ( ; mCurrIndex < mList.size() ;mCurrIndex++) {
+            do {
+                Bitmap bmp = getImgBasedOnUserFilter(mCursor);
+                if (bmp != null) {
+                  publishProgress(bmp);
+                }
+            } while (mCursor.moveToNext());
+            //performQueryUsingUserFilter(mCursor);
+            /*for  ( ; mCurrIndex < mList.size() ;mCurrIndex++) {
                 String path = mList.get(mCurrIndex);
                 Bitmap bmp = getNextPicture(path);
                 publishProgress(bmp);
-            }
+            }*/
             return null;
         }
         /**
@@ -547,6 +450,133 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         protected void onPostExecute(Object result) {
             setProgressBarIndeterminateVisibility(false);
         }
-    }
 
-}
+        Bitmap getNextPicture(String path) {
+            ExifInterface intf = null;
+            Bitmap bitmap = null;
+            Bitmap newBitmap = null;
+
+            if (path == null) {
+              return null;
+            }
+            try {
+                intf = new ExifInterface(path);
+            } catch(IOException e) {
+                e.printStackTrace();
+            }
+
+            if(intf == null) {
+                return null;
+            }
+
+            String dateString = intf.getAttribute(ExifInterface.TAG_DATETIME);
+            if (DEBUG) Log.d(TAG, dateString);
+            if (intf.hasThumbnail()) {
+               byte[] thumbnail = intf.getThumbnail();
+               //LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+               bitmap = BitmapFactory.decodeByteArray(thumbnail, 0, thumbnail.length);
+               if (bitmap != null) {
+                   newBitmap = Bitmap.createScaledBitmap(bitmap, 240, 240, true);
+                   bitmap.recycle();
+                   if (newBitmap != null) {
+                       return newBitmap;
+                   }
+               }
+               //BitmapDrawable bmd = new BitmapDrawable(getResources(),bmpImg);
+               return bitmap;
+            } else {
+               Uri imageUri = null;
+               try {
+                   imageUri = Uri.parse("file://" + path);
+                   bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(imageUri));
+                   if (bitmap != null) {
+                       newBitmap = Bitmap.createScaledBitmap(bitmap, 300, 300, true);
+                       bitmap.recycle();
+                       if (newBitmap != null) {
+                           return newBitmap;
+                       }
+                   }
+               } catch (IOException e) {
+                   //Error fetching image, try to recover
+               }
+             }
+            return null;
+        }
+
+        Bitmap getImgBasedOnUserFilter(Cursor cur) {
+            boolean added = false;
+            String path   = null;
+            do {
+                String curDate = cur.getString(dateColumn);
+                path = cur.getString(dataColumn);
+
+                long dateinMilliSec = Long.parseLong(curDate);
+                mCalendar.setTimeInMillis(dateinMilliSec);
+                int monthOfYear = mCalendar.get(Calendar.MONTH);
+                //if (monthOfYear >= 0 && monthOfYear <= 11 ) {
+                // TBD: These checks have to much much smarter.. They are way too dumb for my liking
+                if(mUserFilter.toLowerCase().contains(mMonthNamesFilter[monthOfYear].toLowerCase())) {
+                    added = addtoListIfNotFound(path);
+                }
+
+                if (mUserFilter.toLowerCase().contains(mLastWeekEndFilter.toLowerCase())) {
+                    DateRangeManager range = new DateRangeManager();
+                    Pair<Long, Long> p = range.getLastWeekEnd();
+                    range.printDateAndTime(mCalendar);
+
+                    if ((dateinMilliSec >= p.first) && (dateinMilliSec <= p.second)) {
+                      if (DEBUG) Log.d(TAG, "****** Added ********* ");
+                      range.printDateAndTime(mCalendar);
+                      if (DEBUG) Log.d(TAG, "****** Added ********* ");
+                      added = addtoListIfNotFound(path);
+                    }
+                }
+                if (mUserFilter.toLowerCase().contains(mTodayFilter.toLowerCase())) {
+                    // TBD: Need to Re-factor this code with the above
+                    DateRangeManager range = new DateRangeManager();
+                    Pair<Long, Long> p = range.getToday();
+
+                    range.printDateAndTime(mCalendar);
+
+                    if ((dateinMilliSec >= p.first) && (dateinMilliSec <= p.second)) {
+                      added = addtoListIfNotFound(path);
+                    }
+                } else {
+                    if (WARN) Log.i(TAG, "Ooops! No results");
+                }
+                // Enable this control block to examine the performance
+                /*UserFilterAnalyzer analyser1 = new UserFilterAnalyzer(mUserFilter);
+                if ((0 == analyser1.compareUserFilter("San Francisco"))) {
+                    added = addtoListIfNotFound(path);
+                }*/
+                // Following block to 'enable / disable search by places'
+                if ((mSupportGeoCoder) && (mUserFilter.toLowerCase().contains(mPlaceFilter.toLowerCase()))) {
+                   GeoDecoder geoDecoder = null;
+                   String addr = null;
+                   List<Address> address;
+                   try {
+                           geoDecoder = new GeoDecoder(new ExifInterface(path));
+                           if (!geoDecoder.isValid()) break;
+                   } catch (IOException e) {
+                           // TODO Auto-generated catch block
+                           e.printStackTrace();
+                   }
+                   address = geoDecoder.getAddress(mContext);
+                   UserFilterAnalyzer analyser = new UserFilterAnalyzer(mUserFilter);
+                   if (address!= null && (0 == analyser.compareUserFilter(address.get(0).getLocality()))) {
+                        added = addtoListIfNotFound(path);
+                   }
+                   //if(mUserFilter.replace(" ", "").contains(addr.replace(" ","")) && !added) {
+                   /*if(addr!= null && addr.toLowerCase().contains(mUserFilter.toLowerCase())) {
+                        added = addtoListIfNotFound(path);
+                   }*/
+                }
+            } while (false);
+
+            if (added) {
+                return getNextPicture(path);
+            }
+            return null;
+        } // End of function
+    } // End of LoadImagesInBackGround
+} // End of Main class

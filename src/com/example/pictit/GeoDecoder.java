@@ -111,7 +111,7 @@ Geocoder geocoder;
 	String city = addresses.get(0).getAddressLine(1);
 	String country = addresses.get(0).getAddressLine(2);
 	String local = addresses.get(0).getLocality();
-	Log.i("address : " , address + "  " + country + "  " + city + " " + local);
+	Log.i("address : " , address + " - " + city + " - " + country + " - " + local);
 } catch (IOException e) {
 	// TODO Auto-generated catch block
 	e.printStackTrace();
@@ -128,9 +128,9 @@ Geocoder geocoder;
 	try {
 	addresses = geocoder.getFromLocation(getLat(), getLong(), 1);
     // TBD: Not efficient
-	completeAdress += addresses.get(0).getAddressLine(0) + ",";
-	completeAdress += addresses.get(0).getAddressLine(1) + ",";
-	completeAdress += addresses.get(0).getAddressLine(2) + ",";
+	completeAdress += addresses.get(0).getAddressLine(0) + " -  ";
+	completeAdress += addresses.get(0).getAddressLine(1) + " -  ";
+	completeAdress += addresses.get(0).getAddressLine(2) + " -  ";
 	completeAdress +=addresses.get(0).getLocality();
 	Log.i("address : " , completeAdress);
 } catch (IOException e) {
