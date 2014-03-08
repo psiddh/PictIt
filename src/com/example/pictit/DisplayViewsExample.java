@@ -45,7 +45,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 {
     private String TAG = "Pickit/DisplayView";
     // CPU & connectivity data intensive operation guarded by this flag
-    private boolean mSupportGeoCoder = true;
+    private boolean mSupportGeoCoder = false;
 
     int bucketColumn = 0;
     int dateColumn = 0;
@@ -86,6 +86,8 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
      */
     private GridImageAdapter imageAdapter;
 
+    private UserFilterAnalyzer mAnalyzer;
+
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
@@ -97,7 +99,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         Intent intent = getIntent();
         String filter = intent.getExtras().getString("filter");
         mUserFilter = filter;
-
+        mAnalyzer = new UserFilterAnalyzer(filter);
         setProgressBarIndeterminateVisibility(true);
 
         /*mgridView = (GridView) findViewById(R.id.gridview);
@@ -424,7 +426,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 if (bmp != null) {
                   publishProgress(bmp);
                 }
-            } while (mCursor.moveToNext());
+            } while (!mCursor.isClosed() && mCursor.moveToNext());
             //performQueryUsingUserFilter(mCursor);
             /*for  ( ; mCurrIndex < mList.size() ;mCurrIndex++) {
                 String path = mList.get(mCurrIndex);
@@ -507,7 +509,9 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             boolean added = false;
             String path   = null;
             do {
+                if (cur.isClosed()) return null;
                 String curDate = cur.getString(dateColumn);
+                if (cur.isClosed()) return null;
                 path = cur.getString(dataColumn);
 
                 long dateinMilliSec = Long.parseLong(curDate);
@@ -515,8 +519,20 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 int monthOfYear = mCalendar.get(Calendar.MONTH);
                 //if (monthOfYear >= 0 && monthOfYear <= 11 ) {
                 // TBD: These checks have to much much smarter.. They are way too dumb for my liking
+                Pair<Long, Long> pairRange = mAnalyzer.getDateRange(mUserFilter);
+                if (null != pairRange) {
+                     DateRangeManager range = new DateRangeManager();
+                    range.printDateAndTime(mCalendar);
+                    if ((dateinMilliSec >= pairRange.first) && (dateinMilliSec <= pairRange.second)) {
+                        if (DEBUG) Log.d(TAG, "****** Added ********* ");
+                        range.printDateAndTime(mCalendar);
+                        if (DEBUG) Log.d(TAG, "****** Added ********* ");
+                      added = addtoListIfNotFound(path);
+                    }
+                }
+
                 if(mUserFilter.toLowerCase().contains(mMonthNamesFilter[monthOfYear].toLowerCase())) {
-                    added = addtoListIfNotFound(path);
+                    //added = addtoListIfNotFound(path);
                 }
 
                 if (mUserFilter.toLowerCase().contains(mLastWeekEndFilter.toLowerCase())) {
@@ -541,8 +557,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                     if ((dateinMilliSec >= p.first) && (dateinMilliSec <= p.second)) {
                       added = addtoListIfNotFound(path);
                     }
-                } else {
-                    if (WARN) Log.i(TAG, "Ooops! No results");
                 }
                 // Enable this control block to examine the performance
                 /*UserFilterAnalyzer analyser1 = new UserFilterAnalyzer(mUserFilter);
@@ -563,13 +577,15 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                    }
                    address = geoDecoder.getAddress(mContext);
                    UserFilterAnalyzer analyser = new UserFilterAnalyzer(mUserFilter);
-                   if (address!= null && (0 == analyser.compareUserFilter(address.get(0).getLocality()))) {
+                   if (address!= null && (0 == analyser.compareUserFilterForCity(address.get(0).getLocality()))) {
                         added = addtoListIfNotFound(path);
                    }
                    //if(mUserFilter.replace(" ", "").contains(addr.replace(" ","")) && !added) {
                    /*if(addr!= null && addr.toLowerCase().contains(mUserFilter.toLowerCase())) {
                         added = addtoListIfNotFound(path);
                    }*/
+                } else {
+                    if (WARN) Log.i(TAG, "Ooops! No results");
                 }
             } while (false);
 
