@@ -226,7 +226,7 @@ public class UserFilterAnalyzer implements LogUtils{
             Integer[] keyword_Val = mDateRangeKeyWord.get(mWords[index]);
             switch (keyword_Val[0]) {
               case KEYWORD_YEAR :
-                  if (!range1.isSet(Calendar.YEAR))
+                  if (!range1.isSet(Calendar.YEAR) && !isCalendarObjSet(range2))
                     range1.set(Calendar.YEAR,keyword_Val[1]);
                   else
                     range2.set(Calendar.YEAR,keyword_Val[1]);
@@ -258,10 +258,23 @@ public class UserFilterAnalyzer implements LogUtils{
             }
         }
 
-        if (!range1.isSet(Calendar.YEAR))
+        if (range1.isSet(Calendar.YEAR) && !range2.isSet(Calendar.YEAR)) {
+            int thisYear = range1.get(Calendar.YEAR);
+            range2.set(Calendar.YEAR,thisYear);
+        }
+
+        if (range2.isSet(Calendar.YEAR) && !range1.isSet(Calendar.YEAR)) {
+            int thisYear = range2.get(Calendar.YEAR);
+            range1.set(Calendar.YEAR,thisYear);
+            if (range1.getTimeInMillis() > range2.getTimeInMillis()) {
+                range1.add(Calendar.YEAR, -1);
+            }
+        }
+
+        if (!range1.isSet(Calendar.YEAR) && !range2.isSet(Calendar.YEAR)) {
             range1.set(Calendar.YEAR,rangeMgr.getCurrentYear());
-        if (!range2.isSet(Calendar.YEAR))
             range2.set(Calendar.YEAR,rangeMgr.getCurrentYear());
+        }
 
         if (!range1.isSet(Calendar.MONTH))
             range1.set(Calendar.MONTH,0);
@@ -274,11 +287,19 @@ public class UserFilterAnalyzer implements LogUtils{
             range2.set(Calendar.DAY_OF_MONTH,1);
 
         if (0 == range1.compareTo(range2)) {
-            return null;
+            //return null;
+        }
+
+        if (range1.getTimeInMillis() > range2.getTimeInMillis()) {
+          return rangeMgr.getRange(range2, range1);
         }
 
         Pair<Long, Long> p = rangeMgr.getRange(range1, range2);
         return p;
+    }
+
+    private boolean isCalendarObjSet(Calendar cal) {
+        return (cal.isSet(Calendar.YEAR) || cal.isSet(Calendar.MONTH) || cal.isSet(Calendar.DAY_OF_MONTH));
     }
 
     private String getStringFromKeyWord(Integer[] keyword_Val) {
