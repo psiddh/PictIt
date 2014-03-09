@@ -45,7 +45,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 {
     private String TAG = "Pickit/DisplayView";
     // CPU & connectivity data intensive operation guarded by this flag
-    private boolean mSupportGeoCoder = false;
+    private boolean mSupportGeoCoder = true;
 
     int bucketColumn = 0;
     int dateColumn = 0;
@@ -407,6 +407,18 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
          return false;
      }
 
+    boolean removeFomrList(String path) {
+        if (mList.contains(path)) {
+            int index = mList.indexOf(path);
+            if (index != -1) {
+              mList.remove(index);
+              if (DEBUG) Log.d(TAG, "Path : " + path + " removed!");
+            }
+            return true;
+         }
+         return false;
+     }
+
     class LoadImagesInBackGround extends AsyncTask<Object, Bitmap, Object> {
 
         private Cursor mCursor;
@@ -529,10 +541,8 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                         if (DEBUG) Log.d(TAG, "****** Added ********* ");
                       added = addtoListIfNotFound(path);
                     }
-                }
-
-                if(mUserFilter.toLowerCase().contains(mMonthNamesFilter[monthOfYear].toLowerCase())) {
-                    //added = addtoListIfNotFound(path);
+                } else if(mUserFilter.toLowerCase().contains(mMonthNamesFilter[monthOfYear].toLowerCase())) {
+                    added = addtoListIfNotFound(path);
                 }
 
                 if (mUserFilter.toLowerCase().contains(mLastWeekEndFilter.toLowerCase())) {

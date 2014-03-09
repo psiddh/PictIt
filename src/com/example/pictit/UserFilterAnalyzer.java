@@ -215,6 +215,7 @@ public class UserFilterAnalyzer implements LogUtils{
     public Pair<Long,Long> getDateRange(String compareString) {
         if (DEBUG) Log.d(TAG, "getDateRange String : " + compareString);
         int index = 0;
+        int[] validRange = {0,0,0};
         int unknownCnt = 0;
         Calendar range1 = getNewCalObj();
         Calendar range2 = getNewCalObj();
@@ -230,18 +231,21 @@ public class UserFilterAnalyzer implements LogUtils{
                     range1.set(Calendar.YEAR,keyword_Val[1]);
                   else
                     range2.set(Calendar.YEAR,keyword_Val[1]);
+                  validRange[0]++;
                   break;
               case KEYWORD_MONTH_NAME :
                   if (!range1.isSet(Calendar.MONTH))
                       range1.set(Calendar.MONTH,keyword_Val[1]);
                   else
                     range2.set(Calendar.MONTH,keyword_Val[1]);
+                  validRange[1]++;
                   break;
               case KEYWORD_MONTH_DAYS :
                   if (!range1.isSet(Calendar.DAY_OF_MONTH))
                       range1.set(Calendar.DAY_OF_MONTH,keyword_Val[1]);
                   else
                     range2.set(Calendar.DAY_OF_MONTH,keyword_Val[1]);
+                  validRange[2]++;
                   break;
               case KEYWORD_WEEKEND :
               case KEYWORD_MONTH :
@@ -257,6 +261,9 @@ public class UserFilterAnalyzer implements LogUtils{
                   break;
             }
         }
+
+        if (!(validRange[0] > 1 || validRange[1] > 1 || validRange[2] > 1))
+          return null;
 
         if (range1.isSet(Calendar.YEAR) && !range2.isSet(Calendar.YEAR)) {
             int thisYear = range1.get(Calendar.YEAR);
