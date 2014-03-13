@@ -196,36 +196,36 @@ public class UserFilterAnalyzer implements LogUtils{
     int currentIndex = 0;
     boolean foundPreposition = false;
     for (int i = 0; i < mWords.length; i++) {
-    if ((0 == (mWords[i].compareToIgnoreCase("Place"))) ||
-        (0 == (mWords[i].compareToIgnoreCase("Places")))) {
-    placeIndex = i;
-    break;
-    }
+        if ((0 == (mWords[i].compareToIgnoreCase("Place"))) ||
+            (0 == (mWords[i].compareToIgnoreCase("Places")))) {
+            placeIndex = i;
+            break;
+        }
     }
 
     if (-1 == placeIndex) return foundPreposition;
     currentIndex = placeIndex;
     // Now we have placeIndex
     do {
-    if ((currentIndex - 1) >= 0) {
-if (isFillerWord(mWords[currentIndex - 1])) {
-currentIndex--;
-retry++;
-continue;
-}
+        if ((currentIndex - 1) >= 0) {
+            if (isFillerWord(mWords[currentIndex - 1])) {
+                currentIndex--;
+                retry++;
+                continue;
+            }
+            if (isWordAPreposition(mWords[currentIndex - 1])) {
+                foundPreposition = true;
+                break;
+            }
+            currentIndex--;
+            retry++;
+            continue;
+        }
+    } while (currentIndex > 0 && retry < 2 && currentIndex < mWords.length);  // value 2 for fault tolerance.. yeah I know
 
-if (isWordAPreposition(mWords[currentIndex - 1])) {
-foundPreposition = true;
-break;
-}
-currentIndex--;
-retry++;
-continue;
-    }
-    } while (currentIndex > 0 && retry < 2 && currentIndex < mWords.length);  // value 3 for fault tolerance.. yeah I know
-
-    if (DEBUG && (currentIndex - 1) >= 0 ) Log.d(TAG, "Found preposition at index " + (currentIndex - 1) + " Word : "  + mWords[currentIndex - 1]);
-    return foundPreposition;
+        if (DEBUG && (currentIndex - 1) >= 0 )
+            Log.d(TAG, "Found preposition at index " + (currentIndex - 1) + " Word : "  + mWords[currentIndex - 1]);
+        return foundPreposition;
     }
 
     private boolean isFillerWord(String word){
