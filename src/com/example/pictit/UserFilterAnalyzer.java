@@ -29,6 +29,8 @@ public class UserFilterAnalyzer implements LogUtils{
 
     private String[] mWords ;
 
+    private int mDateRangeIndexEnd = -1;
+
     Map<String, Integer[]> mDateRangeKeyWord = new HashMap<String, Integer[]>();
 
     private static final int KEYWORD_MONTH_NAME = 1;
@@ -188,24 +190,82 @@ public class UserFilterAnalyzer implements LogUtils{
         initKeyWords();
     }
 
+    public boolean isPrepositionKeywordFoundBeforePlace(String compareString) {
+    int placeIndex = -1;
+    int retry = 0;
+    int currentIndex = 0;
+    boolean foundPreposition = false;
+    for (int i = 0; i < mWords.length; i++) {
+    if ((0 == (mWords[i].compareToIgnoreCase("Place"))) ||
+        (0 == (mWords[i].compareToIgnoreCase("Places")))) {
+    placeIndex = i;
+    break;
+    }
+    }
+
+    if (-1 == placeIndex) return foundPreposition;
+    currentIndex = placeIndex;
+    // Now we have placeIndex
+    do {
+    if ((currentIndex - 1) >= 0) {
+if (isFillerWord(mWords[currentIndex - 1])) {
+currentIndex--;
+retry++;
+continue;
+}
+
+if (isWordAPreposition(mWords[currentIndex - 1])) {
+foundPreposition = true;
+break;
+}
+currentIndex--;
+retry++;
+continue;
+    }
+    } while (currentIndex > 0 && retry < 2 && currentIndex < mWords.length);  // value 3 for fault tolerance.. yeah I know
+
+    if (DEBUG && (currentIndex - 1) >= 0 ) Log.d(TAG, "Found preposition at index " + (currentIndex - 1) + " Word : "  + mWords[currentIndex - 1]);
+    return foundPreposition;
+    }
+
+    private boolean isFillerWord(String word){
+    String fillers[] = {"A", "AN", "THE"};
+    for (String s : fillers) {
+        if (s.equalsIgnoreCase(word))
+        return true;
+         }
+    return false;
+    }
+
+    private boolean isWordAPreposition(String word){
+    String fillers[] = {"At", "IN", "FROM", "AROUND", "NEAR", "NEAR TO"};
+    for (String s : fillers) {
+        if (s.equalsIgnoreCase(word))
+        return true;
+         }
+    return false;
+    }
+
     public int compareUserFilterForCity(String compareString) {
-        if (DEBUG) Log.d(TAG, "compareUserFilterForCity String : " + compareString);
+        //if (DEBUG) Log.d(TAG, "compareUserFilterForCity String : " + compareString);
         String concat = "";
         for (int i = 0; i < mWords.length; i++) {
           concat += mWords[i] + " ";
-          if (DEBUG) Log.d(TAG, "First Index : " + i + " - " + concat);
+          //if (DEBUG) Log.d(TAG, "First Index : " + i + " - " + concat);
             for (int j = i+1; j < mWords.length; j++) {
               concat += mWords[j] + " ";
-              if (DEBUG) Log.d(TAG, "Second Index : " + j + " - " + concat);
+              //if (DEBUG) Log.d(TAG, "Second Index : " + j + " - " + concat);
               if(concat.toLowerCase().contains(compareString.toLowerCase())) {
+              //if (DEBUG) Log.d(TAG, "***** Place Matched - " + compareString);
                   return MATCH_SUCCESS;
               }
               if (j+1 == mWords.length) {
-                  if (DEBUG) Log.d(TAG, "**** Reset ****");
+                 // if (DEBUG) Log.d(TAG, "**** Reset ****");
                   concat = "";
               }
             }
           if(concat.toLowerCase().contains(compareString.toLowerCase())) {
+        //if (DEBUG) Log.d(TAG, "***** Place Matched - " + compareString);
             return MATCH_SUCCESS;
           }
         }
@@ -217,8 +277,8 @@ public class UserFilterAnalyzer implements LogUtils{
         int index = 0;
         int[] validRange = {0,0,0};
         int unknownCnt = 0;
-        Calendar range1 = getNewCalObj();
-        Calendar range2 = getNewCalObj();
+        Calendar range1 = getNewCalObj(true);
+        Calendar range2 = getNewCalObj(false);
         DateRangeManager rangeMgr = new DateRangeManager();
         for (index = 0; index < mWords.length; index++) {
             if(!mDateRangeKeyWord.containsKey(mWords[index])) {
@@ -232,6 +292,7 @@ public class UserFilterAnalyzer implements LogUtils{
                   else
                     range2.set(Calendar.YEAR,keyword_Val[1]);
                   validRange[0]++;
+                  mDateRangeIndexEnd = index;
                   break;
               case KEYWORD_MONTH_NAME :
                   if (!range1.isSet(Calendar.MONTH))
@@ -239,6 +300,7 @@ public class UserFilterAnalyzer implements LogUtils{
                   else
                     range2.set(Calendar.MONTH,keyword_Val[1]);
                   validRange[1]++;
+                  mDateRangeIndexEnd = index;
                   break;
               case KEYWORD_MONTH_DAYS :
                   if (!range1.isSet(Calendar.DAY_OF_MONTH))
@@ -246,6 +308,7 @@ public class UserFilterAnalyzer implements LogUtils{
                   else
                     range2.set(Calendar.DAY_OF_MONTH,keyword_Val[1]);
                   validRange[2]++;
+                  mDateRangeIndexEnd = index;
                   break;
               case KEYWORD_WEEKEND :
               case KEYWORD_MONTH :
@@ -358,14 +421,21 @@ public class UserFilterAnalyzer implements LogUtils{
         return 0;
     }*/
 
-    private Calendar getNewCalObj() {
+    private Calendar getNewCalObj(boolean isFirstValue) {
         Calendar cal = Calendar.getInstance((Locale.getDefault()));
         // reset hour, minutes, seconds and millis
         cal.clear();
-        cal.set(Calendar.HOUR_OF_DAY, 0);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
+        if (isFirstValue) {
+          cal.set(Calendar.HOUR_OF_DAY, 0);
+          cal.set(Calendar.MINUTE, 0);
+          cal.set(Calendar.SECOND, 0);
+          cal.set(Calendar.MILLISECOND, 0);
+        } else {
+          cal.set(Calendar.HOUR_OF_DAY, 23);
+          cal.set(Calendar.MINUTE, 59);
+          cal.set(Calendar.SECOND, 59);
+          cal.set(Calendar.MILLISECOND, 999);
+        }
         return cal;
     }
     @Override

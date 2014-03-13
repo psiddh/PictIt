@@ -407,7 +407,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
          return false;
      }
 
-    boolean removeFomrList(String path) {
+    boolean removeFromList(String path) {
         if (mList.contains(path)) {
             int index = mList.indexOf(path);
             if (index != -1) {
@@ -442,7 +442,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             //performQueryUsingUserFilter(mCursor);
             /*for  ( ; mCurrIndex < mList.size() ;mCurrIndex++) {
                 String path = mList.get(mCurrIndex);
-                Bitmap bmp = getNextPicture(path);
+                Bitmap bmp = getPicture(path);
                 publishProgress(bmp);
             }*/
             return null;
@@ -465,7 +465,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             setProgressBarIndeterminateVisibility(false);
         }
 
-        Bitmap getNextPicture(String path) {
+        Bitmap getPicture(String path) {
             ExifInterface intf = null;
             Bitmap bitmap = null;
             Bitmap newBitmap = null;
@@ -519,6 +519,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
         Bitmap getImgBasedOnUserFilter(Cursor cur) {
             boolean added = false;
+            int dateRangeMatchFound = -1;
             String path   = null;
             do {
                 if (cur.isClosed()) return null;
@@ -533,16 +534,20 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 // TBD: These checks have to much much smarter.. They are way too dumb for my liking
                 Pair<Long, Long> pairRange = mAnalyzer.getDateRange(mUserFilter);
                 if (null != pairRange) {
-                     DateRangeManager range = new DateRangeManager();
+                    DateRangeManager range = new DateRangeManager();
                     range.printDateAndTime(mCalendar);
                     if ((dateinMilliSec >= pairRange.first) && (dateinMilliSec <= pairRange.second)) {
                         if (DEBUG) Log.d(TAG, "****** Added ********* ");
                         range.printDateAndTime(mCalendar);
                         if (DEBUG) Log.d(TAG, "****** Added ********* ");
-                      added = addtoListIfNotFound(path);
+                        dateRangeMatchFound= 0;
+                      added = true;//addtoListIfNotFound(path);
+                    } else {
+                        dateRangeMatchFound= 1;
+                        added = false;
                     }
                 } else if(mUserFilter.toLowerCase().contains(mMonthNamesFilter[monthOfYear].toLowerCase())) {
-                    added = addtoListIfNotFound(path);
+                    added = true;//addtoListIfNotFound(path);
                 }
 
                 if (mUserFilter.toLowerCase().contains(mLastWeekEndFilter.toLowerCase())) {
@@ -554,7 +559,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                       if (DEBUG) Log.d(TAG, "****** Added ********* ");
                       range.printDateAndTime(mCalendar);
                       if (DEBUG) Log.d(TAG, "****** Added ********* ");
-                      added = addtoListIfNotFound(path);
+                      added = true;// addtoListIfNotFound(path);
+                      dateRangeMatchFound= 0;
+                    } else {
+                        dateRangeMatchFound= 1;
+                        added = false; //!removeFromList(path);
                     }
                 }
                 if (mUserFilter.toLowerCase().contains(mTodayFilter.toLowerCase())) {
@@ -565,42 +574,71 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                     range.printDateAndTime(mCalendar);
 
                     if ((dateinMilliSec >= p.first) && (dateinMilliSec <= p.second)) {
-                      added = addtoListIfNotFound(path);
+                        dateRangeMatchFound= 0;
+                      added = true; // traddtoListIfNotFound(path);
+                    } else {
+                        dateRangeMatchFound= 1;
+                        added = false; //!removeFromList(path);
                     }
                 }
-                // Enable this control block to examine the performance
-                /*UserFilterAnalyzer analyser1 = new UserFilterAnalyzer(mUserFilter);
-                if ((0 == analyser1.compareUserFilter("San Francisco"))) {
-                    added = addtoListIfNotFound(path);
-                }*/
                 // Following block to 'enable / disable search by places'
+                // TBD All of the parse logic should eventually be wrapped into UserFileterAnalyzer
                 if ((mSupportGeoCoder) && (mUserFilter.toLowerCase().contains(mPlaceFilter.toLowerCase()))) {
                    GeoDecoder geoDecoder = null;
                    String addr = null;
+                   boolean alsoMatchCity = mAnalyzer.isPrepositionKeywordFoundBeforePlace(mUserFilter);
+                   //added = !alsoMatchCity;
                    List<Address> address;
                    try {
                            geoDecoder = new GeoDecoder(new ExifInterface(path));
-                           if (!geoDecoder.isValid()) break;
+                           if (!geoDecoder.isValid()) {
+                               // This image doesn't have valid or no lat / long associated to it
+                               // What if it is already added as a result of 'Date Range'.
+                               //  - Since we cannot determine the 'locality' of this image,
+                               //            check 'alsoMatchCity' flag.
+                               if (alsoMatchCity && added) {
+                                   // Match city is true (explicitly requested by user) and previously added flag is true
+                                   added = false;
+                               }
+
+                               break;
+                           }
                    } catch (IOException e) {
                            // TODO Auto-generated catch block
                            e.printStackTrace();
                    }
                    address = geoDecoder.getAddress(mContext);
-                   UserFilterAnalyzer analyser = new UserFilterAnalyzer(mUserFilter);
-                   if (address!= null && (0 == analyser.compareUserFilterForCity(address.get(0).getLocality()))) {
-                        added = addtoListIfNotFound(path);
+                   if (address!= null && (0 == mAnalyzer.compareUserFilterForCity(address.get(0).getLocality()))) {
+                     // At this point, 'locality' / 'city' is matched.
+                     // check 'dateRangeMatchFound' has been set or not
+                     if (dateRangeMatchFound != -1) {
+                         // DateRange has been set
+                         if ((dateRangeMatchFound == 0) && (alsoMatchCity)) {
+                             // Date Range Match found and Match city
+                             added = true;
+                         } else if ((dateRangeMatchFound == 1) && (alsoMatchCity)) {
+                             // date range is false , and match city
+                             added = false;
+                         } else {
+                             // Match city flag is false, but city matches anyways
+                             added = true;
+                         }
+                     } else {
+                       // Date Range not set but Locality match succeed.
+                       added = true;
+                     }
+                   } else {
+                     // City doesn't exist
+                        added = false ;
                    }
-                   //if(mUserFilter.replace(" ", "").contains(addr.replace(" ","")) && !added) {
-                   /*if(addr!= null && addr.toLowerCase().contains(mUserFilter.toLowerCase())) {
-                        added = addtoListIfNotFound(path);
-                   }*/
                 } else {
                     if (WARN) Log.i(TAG, "Ooops! No results");
                 }
             } while (false);
 
             if (added) {
-                return getNextPicture(path);
+                addtoListIfNotFound(path);
+                return getPicture(path);
             }
             return null;
         } // End of function
