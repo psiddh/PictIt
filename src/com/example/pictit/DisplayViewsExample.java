@@ -88,9 +88,10 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
     private UserFilterAnalyzer mAnalyzer;
 
+    private AsyncTask<Object, Bitmap, Object> mLoadImagesInBackground = null;
+
     @Override
-    public void onCreate(Bundle savedInstanceState)
-    {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         setContentView(R.layout.displaygridview);
@@ -119,6 +120,21 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
         setupViews();
 
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        if (!mLoadImagesInBackground.isCancelled()) {
+        }
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        if (!mLoadImagesInBackground.isCancelled()) {
+            mLoadImagesInBackground.cancel(true);
+        }
     }
 
     /**
@@ -185,6 +201,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         if (data != null) {
             mGridCount = data.getCount();
             setupCursor(data);
+
             new LoadImagesInBackGround(data, this).execute();
             imageAdapter = new GridImageAdapter(getApplicationContext());
             displayImages.setAdapter(imageAdapter);
@@ -383,8 +400,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         }
     }
 
-
-
     /**
      * Add image(s) to the grid view adapter.
      *
@@ -432,6 +447,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
          * Load images in the background, and display each image on the screen.
          */
         protected String doInBackground(Object... params) {
+            if (isCancelled()) return null;
             setProgressBarIndeterminateVisibility(true);
             do {
                 Bitmap bmp = getImgBasedOnUserFilter(mCursor);
@@ -460,6 +476,10 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
          *
          * @see android.os.AsyncTask#onPostExecute(java.lang.Object)
          */
+        @Override
+        protected void onPreExecute(){
+            mLoadImagesInBackground = this;
+        }
         @Override
         protected void onPostExecute(Object result) {
             setProgressBarIndeterminateVisibility(false);
@@ -592,14 +612,20 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                    try {
                            geoDecoder = new GeoDecoder(new ExifInterface(path));
                            if (!geoDecoder.isValid()) {
-                               // This image doesn't have valid or no lat / long associated to it
+                               // This image doesn't not have valid lat / long associated to it
                                // What if it is already added as a result of 'Date Range'.
                                //  - Since we cannot determine the 'locality' of this image,
-                               //            check 'alsoMatchCity' flag.
+                               //    check 'alsoMatchCity' flag.
                                if (alsoMatchCity && added) {
-                                   // Match city is true (explicitly requested by user) and previously added flag is true
-                                   added = false;
+                                    // Match city is true (explicitly requested by user) and
+                                    // previously added flag is true (possibly due to date range check),
+                                    // but there is no associated lat/long... Sorry User!
+
+                                    // TBD: From User point of view, maybe more is better ?
+                                    added = false;
                                }
+                               // Either Match city is false or was not previously added. In both cases
+                               // retain the added flag as-is
 
                                break;
                            }

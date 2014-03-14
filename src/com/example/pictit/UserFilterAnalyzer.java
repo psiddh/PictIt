@@ -21,15 +21,16 @@ public class UserFilterAnalyzer implements LogUtils{
 
     private String TAG = "pickit/UserFilterAnalyzer";
 
-    private int    MATCH_SUCCESS = 0;
-    private int    MATCH_PARTIAL = 1;
-    private int    MATCH_FAILURE  = 2;
+    private int    MATCH_SUCCESS  = 0;
+    private int    MATCH_FAILURE  = 1;
+
+    private int   SINGLE_DAY_OFFSET_IN_MS = 86400000;
 
     private String userFilter = null;
 
     private String[] mWords ;
 
-    private int mDateRangeIndexEnd = -1;
+    DateRangeManager mRangeMgr = new DateRangeManager();
 
     Map<String, Integer[]> mDateRangeKeyWord = new HashMap<String, Integer[]>();
 
@@ -45,32 +46,32 @@ public class UserFilterAnalyzer implements LogUtils{
 
     private void initKeyWords() {
         // Month key words
-        mDateRangeKeyWord.put("January", new Integer[] {KEYWORD_MONTH_NAME, 0});
-        mDateRangeKeyWord.put("Jan", new Integer[] {KEYWORD_MONTH_NAME, 0});
-        mDateRangeKeyWord.put("February", new Integer[] {KEYWORD_MONTH_NAME, 1});
-        mDateRangeKeyWord.put("Feb", new Integer[] {KEYWORD_MONTH_NAME, 1});
-        mDateRangeKeyWord.put("March", new Integer[] {KEYWORD_MONTH_NAME, 2});
-        mDateRangeKeyWord.put("April", new Integer[] {KEYWORD_MONTH_NAME, 3});
-        mDateRangeKeyWord.put("May", new Integer[] {KEYWORD_MONTH_NAME, 4});
-        mDateRangeKeyWord.put("June", new Integer[] {KEYWORD_MONTH_NAME, 5});
-        mDateRangeKeyWord.put("July", new Integer[] {KEYWORD_MONTH_NAME, 6});
-        mDateRangeKeyWord.put("August", new Integer[] {KEYWORD_MONTH_NAME, 7});
-        mDateRangeKeyWord.put("September", new Integer[] {KEYWORD_MONTH_NAME, 8});
-        mDateRangeKeyWord.put("October", new Integer[] {KEYWORD_MONTH_NAME, 9});
-        mDateRangeKeyWord.put("November", new Integer[] {KEYWORD_MONTH_NAME, 10});
-        mDateRangeKeyWord.put("December", new Integer[] {KEYWORD_MONTH_NAME, 11});
+        mDateRangeKeyWord.put("january", new Integer[] {KEYWORD_MONTH_NAME, 0});
+        mDateRangeKeyWord.put("jan", new Integer[] {KEYWORD_MONTH_NAME, 0});
+        mDateRangeKeyWord.put("february", new Integer[] {KEYWORD_MONTH_NAME, 1});
+        mDateRangeKeyWord.put("feb", new Integer[] {KEYWORD_MONTH_NAME, 1});
+        mDateRangeKeyWord.put("march", new Integer[] {KEYWORD_MONTH_NAME, 2});
+        mDateRangeKeyWord.put("april", new Integer[] {KEYWORD_MONTH_NAME, 3});
+        mDateRangeKeyWord.put("may", new Integer[] {KEYWORD_MONTH_NAME, 4});
+        mDateRangeKeyWord.put("june", new Integer[] {KEYWORD_MONTH_NAME, 5});
+        mDateRangeKeyWord.put("july", new Integer[] {KEYWORD_MONTH_NAME, 6});
+        mDateRangeKeyWord.put("august", new Integer[] {KEYWORD_MONTH_NAME, 7});
+        mDateRangeKeyWord.put("september", new Integer[] {KEYWORD_MONTH_NAME, 8});
+        mDateRangeKeyWord.put("october", new Integer[] {KEYWORD_MONTH_NAME, 9});
+        mDateRangeKeyWord.put("november", new Integer[] {KEYWORD_MONTH_NAME, 10});
+        mDateRangeKeyWord.put("december", new Integer[] {KEYWORD_MONTH_NAME, 11});
 
         // Date related phrases
-        mDateRangeKeyWord.put("Last Weekend", new Integer[] {KEYWORD_WEEKEND, -1});
-        mDateRangeKeyWord.put("This Weekend", new Integer[] {KEYWORD_WEEKEND, -1});
-        mDateRangeKeyWord.put("Around Weekend", new Integer[] {KEYWORD_WEEKEND, -1});
-        mDateRangeKeyWord.put("Last Two Weekends", new Integer[] {KEYWORD_WEEKEND, -1});
-        mDateRangeKeyWord.put("Weekend", new Integer[] {KEYWORD_WEEKEND, -1});
+        mDateRangeKeyWord.put("last weekend", new Integer[] {KEYWORD_WEEKEND, -1});
+        mDateRangeKeyWord.put("this weekend", new Integer[] {KEYWORD_WEEKEND, -1});
+        mDateRangeKeyWord.put("around weekend", new Integer[] {KEYWORD_WEEKEND, -1});
+        mDateRangeKeyWord.put("last two weekends", new Integer[] {KEYWORD_WEEKEND, -1});
+        mDateRangeKeyWord.put("weekend", new Integer[] {KEYWORD_WEEKEND, -1});
 
         // Month related phrases
-        mDateRangeKeyWord.put("Last Month", new Integer[] {KEYWORD_MONTH, -1});
-        mDateRangeKeyWord.put("This Month", new Integer[] {KEYWORD_MONTH, -1});
-        mDateRangeKeyWord.put("Current Month", new Integer[] {KEYWORD_MONTH, -1});
+        mDateRangeKeyWord.put("last month", new Integer[] {KEYWORD_MONTH, -1});
+        mDateRangeKeyWord.put("this month", new Integer[] {KEYWORD_MONTH, -1});
+        mDateRangeKeyWord.put("current month", new Integer[] {KEYWORD_MONTH, -1});
 
         // Days of Month related keywords
         mDateRangeKeyWord.put("st", new Integer[] {KEYWORD_MONTH_DAYS, -1}); // treat this as day for now!
@@ -163,8 +164,8 @@ public class UserFilterAnalyzer implements LogUtils{
         mDateRangeKeyWord.put("Year",new Integer[] {KEYWORD_YEAR, -1});
 
         // Today keywords
-        mDateRangeKeyWord.put("Today",new Integer[] {KEYWORD_TODAY, -1});
-        mDateRangeKeyWord.put("Today's",new Integer[] {KEYWORD_TODAY, -1});
+        mDateRangeKeyWord.put("today",new Integer[] {KEYWORD_TODAY, -1});
+        mDateRangeKeyWord.put("today's",new Integer[] {KEYWORD_TODAY, -1});
 
         // Special words
         mDateRangeKeyWord.put("till",new Integer[] {KEYWORD_SPECIAL, -1});
@@ -174,8 +175,8 @@ public class UserFilterAnalyzer implements LogUtils{
         mDateRangeKeyWord.put("st",new Integer[] {KEYWORD_SPECIAL, -1});
 
         // Other phrases
-        mDateRangeKeyWord.put("Couple of weeks",new Integer[] {KEYWORD_PHRASES_OTHER, -1});
-        mDateRangeKeyWord.put("Beginning of the World",new Integer[] {KEYWORD_PHRASES_OTHER, -1});
+        mDateRangeKeyWord.put("couple of weeks",new Integer[] {KEYWORD_PHRASES_OTHER, -1});
+        mDateRangeKeyWord.put("beginning of the world",new Integer[] {KEYWORD_PHRASES_OTHER, -1});
     }
 
     public UserFilterAnalyzer(String filter) {
@@ -272,6 +273,23 @@ public class UserFilterAnalyzer implements LogUtils{
         return MATCH_FAILURE;
     }
 
+    public Pair<Long,Long> getRangeForSingleDateIfValid(Calendar range1, Calendar range2) {
+        if ((range1.isSet(Calendar.MONTH)) && (range1.isSet(Calendar.DAY_OF_MONTH))) {
+          range1.set(Calendar.YEAR,mRangeMgr.getCurrentYear());
+        } else if ((range1.isSet(Calendar.MONTH)) && (range1.isSet(Calendar.YEAR))) {
+           range1.set(Calendar.DAY_OF_MONTH,1);
+        } else if ((range1.isSet(Calendar.YEAR)) && (range1.isSet(Calendar.DAY_OF_MONTH))) {
+           range1.set(Calendar.MONTH,0);
+        } else {
+           return null;
+        }
+        // Looks like a valid single date at this point
+        long val1 = range1.getTimeInMillis();
+        long val2 = val1 + SINGLE_DAY_OFFSET_IN_MS;
+        Pair<Long, Long> p = new Pair<Long, Long>(val1,val2);
+        return p;
+    }
+
     public Pair<Long,Long> getDateRange(String compareString) {
         if (DEBUG) Log.d(TAG, "getDateRange String : " + compareString);
         int index = 0;
@@ -279,12 +297,14 @@ public class UserFilterAnalyzer implements LogUtils{
         int unknownCnt = 0;
         Calendar range1 = getNewCalObj(true);
         Calendar range2 = getNewCalObj(false);
-        DateRangeManager rangeMgr = new DateRangeManager();
         for (index = 0; index < mWords.length; index++) {
-            if(!mDateRangeKeyWord.containsKey(mWords[index])) {
+            if(!mDateRangeKeyWord.containsKey(mWords[index].toLowerCase())) {
                 continue;
             }
-            Integer[] keyword_Val = mDateRangeKeyWord.get(mWords[index]);
+            Integer[] keyword_Val = mDateRangeKeyWord.get(mWords[index].toLowerCase());
+            if (keyword_Val == null) {
+              return null;
+            }
             switch (keyword_Val[0]) {
               case KEYWORD_YEAR :
                   if (!range1.isSet(Calendar.YEAR) && !isCalendarObjSet(range2))
@@ -292,7 +312,6 @@ public class UserFilterAnalyzer implements LogUtils{
                   else
                     range2.set(Calendar.YEAR,keyword_Val[1]);
                   validRange[0]++;
-                  mDateRangeIndexEnd = index;
                   break;
               case KEYWORD_MONTH_NAME :
                   if (!range1.isSet(Calendar.MONTH))
@@ -300,7 +319,6 @@ public class UserFilterAnalyzer implements LogUtils{
                   else
                     range2.set(Calendar.MONTH,keyword_Val[1]);
                   validRange[1]++;
-                  mDateRangeIndexEnd = index;
                   break;
               case KEYWORD_MONTH_DAYS :
                   if (!range1.isSet(Calendar.DAY_OF_MONTH))
@@ -308,7 +326,6 @@ public class UserFilterAnalyzer implements LogUtils{
                   else
                     range2.set(Calendar.DAY_OF_MONTH,keyword_Val[1]);
                   validRange[2]++;
-                  mDateRangeIndexEnd = index;
                   break;
               case KEYWORD_WEEKEND :
               case KEYWORD_MONTH :
@@ -318,15 +335,17 @@ public class UserFilterAnalyzer implements LogUtils{
                   if (DEBUG) Log.d(TAG, "Word : " + mWords[index] + " " +  getStringFromKeyWord(keyword_Val));
                   break;
               default:
-                  if (DEBUG) Log.d(TAG, mWords[index] + " - Unknown Cnt : " + unknownCnt);
+                  if (DEBUG && (mWords[index] != null)) Log.d(TAG, mWords[index] + " - Unknown Cnt : " + unknownCnt);
                   // Uh! dumb, lets stick to this fault tolerance for now.
                   if(++unknownCnt > 3) return null;
                   break;
             }
         }
 
-        if (!(validRange[0] > 1 || validRange[1] > 1 || validRange[2] > 1))
-          return null;
+        if (!(validRange[0] > 1 || validRange[1] > 1 || validRange[2] > 1)) {
+          Pair<Long, Long> p = getRangeForSingleDateIfValid(range1, range2);
+          return p;
+        }
 
         if (range1.isSet(Calendar.YEAR) && !range2.isSet(Calendar.YEAR)) {
             int thisYear = range1.get(Calendar.YEAR);
@@ -342,14 +361,21 @@ public class UserFilterAnalyzer implements LogUtils{
         }
 
         if (!range1.isSet(Calendar.YEAR) && !range2.isSet(Calendar.YEAR)) {
-            range1.set(Calendar.YEAR,rangeMgr.getCurrentYear());
-            range2.set(Calendar.YEAR,rangeMgr.getCurrentYear());
+            range1.set(Calendar.YEAR,mRangeMgr.getCurrentYear());
+            range2.set(Calendar.YEAR,mRangeMgr.getCurrentYear());
         }
 
         if (!range1.isSet(Calendar.MONTH))
             range1.set(Calendar.MONTH,0);
-        if (!range2.isSet(Calendar.MONTH))
-            range2.set(Calendar.MONTH,0);
+        if (!range2.isSet(Calendar.MONTH)) {
+            // Now this can be an interesting usecase, Say "February 15th and 16th"
+            if (range2.isSet(Calendar.DAY_OF_MONTH) && range1.isSet(Calendar.DAY_OF_MONTH)) {
+                int thisMonth = range1.get(Calendar.MONTH);
+                range2.set(Calendar.MONTH,thisMonth);
+            } else {
+                range2.set(Calendar.MONTH,0);
+            }
+        }
 
         if (!range1.isSet(Calendar.DAY_OF_MONTH))
             range1.set(Calendar.DAY_OF_MONTH,1);
@@ -361,10 +387,10 @@ public class UserFilterAnalyzer implements LogUtils{
         }
 
         if (range1.getTimeInMillis() > range2.getTimeInMillis()) {
-          return rangeMgr.getRange(range2, range1);
+          return mRangeMgr.getRange(range2, range1);
         }
 
-        Pair<Long, Long> p = rangeMgr.getRange(range1, range2);
+        Pair<Long, Long> p = mRangeMgr.getRange(range1, range2);
         return p;
     }
 
