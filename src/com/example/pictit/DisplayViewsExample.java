@@ -137,6 +137,13 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         }
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if (!mLoadImagesInBackground.isCancelled()) {
+            mLoadImagesInBackground.cancel(true);
+        }
+    }
     /**
      * Setup the grid view.
      */
@@ -449,18 +456,12 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         protected String doInBackground(Object... params) {
             if (isCancelled()) return null;
             setProgressBarIndeterminateVisibility(true);
-            do {
+            while (!mCursor.isClosed() && mCursor.moveToNext() && !isCancelled()) {
                 Bitmap bmp = getImgBasedOnUserFilter(mCursor);
                 if (bmp != null) {
                   publishProgress(bmp);
                 }
-            } while (!mCursor.isClosed() && mCursor.moveToNext());
-            //performQueryUsingUserFilter(mCursor);
-            /*for  ( ; mCurrIndex < mList.size() ;mCurrIndex++) {
-                String path = mList.get(mCurrIndex);
-                Bitmap bmp = getPicture(path);
-                publishProgress(bmp);
-            }*/
+            }
             return null;
         }
         /**
@@ -483,6 +484,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         @Override
         protected void onPostExecute(Object result) {
             setProgressBarIndeterminateVisibility(false);
+        }
+
+        @Override
+        protected void onCancelled(Object result) {
+
         }
 
         Bitmap getPicture(String path) {
