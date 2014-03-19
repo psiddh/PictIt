@@ -456,6 +456,10 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         protected String doInBackground(Object... params) {
             if (isCancelled()) return null;
             setProgressBarIndeterminateVisibility(true);
+           // Again check for isCancelled() , there could be potential race conditions here
+           // when task is cancelled. The thread that just got cancelled (as a result of configuration changes)
+           // still latches onto old cursor object
+
             while (!mCursor.isClosed() && mCursor.moveToNext() && !isCancelled()) {
                 Bitmap bmp = getImgBasedOnUserFilter(mCursor);
                 if (bmp != null) {
@@ -548,11 +552,12 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             int dateRangeMatchFound = -1;
             String path   = null;
             do {
-                if (cur.isClosed()) return null;
+                if (cur.isClosed()) break;
                 String curDate = cur.getString(dateColumn);
-                if (cur.isClosed()) return null;
+                if (cur.isClosed()) break;
                 path = cur.getString(dataColumn);
 
+                if (curDate == null) break;
                 long dateinMilliSec = Long.parseLong(curDate);
                 mCalendar.setTimeInMillis(dateinMilliSec);
                 int monthOfYear = mCalendar.get(Calendar.MONTH);
