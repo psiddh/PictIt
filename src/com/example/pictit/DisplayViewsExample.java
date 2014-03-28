@@ -8,9 +8,11 @@ import java.util.Locale;
 
 import android.app.Activity;
 import android.app.LoaderManager.LoaderCallbacks;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.CursorLoader;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.Loader;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -22,6 +24,7 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Pair;
@@ -47,6 +50,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     // CPU & connectivity data intensive operation guarded by this flag
     private boolean mSupportGeoCoder = true;
 
+    int id = -1;
     int bucketColumn = 0;
     int dateColumn = 0;
     int titleColumn = 0;
@@ -120,6 +124,12 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
         setupViews();
 
+        // Register to receive messages.
+        // We are registering an observer (mMessageReceiver) to receive Intents
+        // with actions named "custom-event-name".
+        LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver,
+            new IntentFilter("custom-event-name"));
+
     }
 
     @Override
@@ -139,11 +149,23 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
     @Override
     public void onDestroy() {
-        super.onDestroy();
-        if (!mLoadImagesInBackground.isCancelled()) {
-            mLoadImagesInBackground.cancel(true);
-        }
+       LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver);
+       if (!mLoadImagesInBackground.isCancelled()) {
+           mLoadImagesInBackground.cancel(true);
+       }
+       super.onDestroy();
     }
+
+     // Our handler for received Intents. This will be called whenever an Intent
+     // with an action named "custom-event-name" is broadcasted.
+     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
+       @Override
+       public void onReceive(Context context, Intent intent) {
+         // Get extra data included in the Intent
+         String message = intent.getStringExtra("message");
+         Log.d("receiver", "Got message: " + message);
+       }
+     };
     /**
      * Setup the grid view.
      */
@@ -230,6 +252,10 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
     void setupCursor(Cursor cur) {
         if (cur.moveToFirst()) {
+
+            id = cur.getColumnIndex(
+                    MediaStore.Images.Media._ID);
+
             bucketColumn = cur.getColumnIndex(
                 MediaStore.Images.Media.BUCKET_DISPLAY_NAME);
 
@@ -614,12 +640,41 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 }
                 // Following block to 'enable / disable search by places'
                 // TBD All of the parse logic should eventually be wrapped into UserFileterAnalyzer
-                if ((mSupportGeoCoder) && (mUserFilter.toLowerCase().contains(mPlaceFilter.toLowerCase()))) {
+                if ((mSupportGeoCoder)) { // && (mUserFilter.toLowerCase().contains(mPlaceFilter.toLowerCase()))) {
                    GeoDecoder geoDecoder = null;
                    String addr = null;
-                   boolean alsoMatchCity = mAnalyzer.isPrepositionKeywordFoundBeforePlace(mUserFilter);
+                   boolean alsoMatchCity = true; //mAnalyzer.isPrepositionKeywordFoundBeforePlace(mUserFilter);
                    //added = !alsoMatchCity;
                    List<Address> address;
+                   ExifInterface intf = null;
+                   try {
+                       intf = new ExifInterface(path);
+                   } catch(IOException e) {
+                       e.printStackTrace();
+                       break;
+                   }
+                   String attrLATITUDE = intf.getAttribute(ExifInterface.TAG_GPS_LATITUDE);
+                   String attrLATITUDE_REF = intf.getAttribute(ExifInterface.TAG_GPS_LATITUDE_REF);
+                   String attrLONGITUDE = intf.getAttribute(ExifInterface.TAG_GPS_LONGITUDE);
+                   String attrLONGITUDE_REF = intf.getAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF);
+
+                   if((attrLATITUDE !=null)
+                     && (attrLATITUDE_REF !=null)
+                     && (attrLONGITUDE != null)
+                     && (attrLONGITUDE_REF !=null)){
+                       // It has some valid values
+                       // Try to read from Cache
+                       Integer currentId = cur.getInt(id);
+                       String placeFound = DataBaseManager.getPlace(currentId);
+                       if (placeFound != null && mUserFilter.toLowerCase().contains(placeFound.toLowerCase())){
+                           // Wow... we have the place in the Cache..
+                           added = true;
+                           break;
+                       }
+                   } else {
+                       continue;
+                   }
+
                    try {
                            geoDecoder = new GeoDecoder(new ExifInterface(path));
                            if (!geoDecoder.isValid()) {

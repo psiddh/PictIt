@@ -57,6 +57,7 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
     private CharSequence mDrawerTitle;
     private String[] mPlanetTitles;
 
+
     //private ShareActionProvider mShareActionProvider;
     /* The click listner for ListView in the navigation drawer */
     private class DrawerItemClickListener implements ListView.OnItemClickListener {
@@ -191,6 +192,10 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
     	//mLinearLayout = (LinearLayout) findViewById(R.id.linear1);
         //createProgressBar();
         //enumeratePics();
+
+        Intent msgIntent = new Intent(this, SyncIntentService.class);
+        //msgIntent.putExtra(SyncIntentService.PARAM_STATE, strInputMsg);
+        startService(msgIntent);
         final Button button = (Button) findViewById(R.id.button1);
         button.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
