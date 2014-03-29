@@ -666,9 +666,14 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                        // Try to read from Cache
                        Integer currentId = cur.getInt(id);
                        String placeFound = DataBaseManager.getPlace(currentId);
-                       if (placeFound != null && mUserFilter.toLowerCase().contains(placeFound.toLowerCase())){
+                       if (placeFound == null) {
+                           // Place not found in cache but it has a valid GPS co-ordinates
+                       } else if(mUserFilter.toLowerCase().contains(placeFound.toLowerCase())){
                            // Wow... we have the place in the Cache..
                            added = true;
+                           break;
+                       } else {
+                           // OK some place exists in cache /db but does not match in UserFilter
                            break;
                        }
                    } else {
@@ -700,7 +705,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                            e.printStackTrace();
                    }
                    address = geoDecoder.getAddress(mContext);
-                   if (address!= null && (0 == mAnalyzer.compareUserFilterForCity(address.get(0).getLocality()))) {
+                   if ((address!= null && address.size() > 0) && (0 == mAnalyzer.compareUserFilterForCity(address.get(0).getLocality()))) {
                      // At this point, 'locality' / 'city' is matched.
                      // check 'dateRangeMatchFound' has been set or not
                      if (dateRangeMatchFound != -1) {

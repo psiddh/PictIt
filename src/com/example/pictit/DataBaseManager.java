@@ -51,6 +51,8 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
       + PICTURE_LAT   + " text,"
       + PICTURE_LONG  + " text);";
 
+  private static final String ROW_PICT_ID_EXISTS = "Select * from " + TABLE_GALLERY + " where " + PICTURE_ID + "=";
+
   public DataBaseManager(Context context) {
     super(context, DATABASE_NAME, null, DATABASE_VERSION);
     mContext = context;
@@ -59,7 +61,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
   @Override
   public void onCreate(SQLiteDatabase database) {
     // This first statement exists only for testing purpose
-    database.execSQL("DROP TABLE IF EXISTS " + TABLE_GALLERY);
+    //database.execSQL("DROP TABLE IF EXISTS " + TABLE_GALLERY);
     database.execSQL(DATABASE_CREATE);
     mDataBase = database;
 
@@ -121,10 +123,19 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
 
     public void performSync(Cursor cur) {
         do {
+           opendb();
             if (cur.isClosed()) break;
             int id = cur.getInt(mId);
-            //String curDate = cur.getString(mDateColumn);
             String path = cur.getString(mDataColumn);
+
+            String placeFound = getPictureFromDB(id);
+            if (placeFound != null) {
+               // Place found in DB...
+               // fill up your pockets now... err cache
+               //if (mMapCache.get(id) != null)
+                 mMapCache.put(id, placeFound);
+               continue;
+            }
 
             List<Address> address;
             String place = null;
@@ -137,33 +148,68 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
                     }
 
                     address = geoDecoder.getAddress(mContext);
-                    if ((address != null) && (address.get(0) != null))
+                    if ((address!= null && address.size() > 0) && (address.get(0) != null))
                       place = address.get(0).getLocality();
-                    insertRow(-1, id, place, null, null);
-                    mMapCache.put(id, place);
+                    if (!checkIfPictureExists(id, place) )
+                      insertRow(-1, id, place, null, null);
+                    //if (mMapCache.get(id) != null)
+                       mMapCache.put(id, place);
                     //address.get(0).getLocality();
             } catch (IOException e) {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
             }
         }while (!cur.isClosed() && cur.moveToNext());
+        closedb();
     }
 
+    private void opendb() {
+       if (mDataBase.isOpen())
+          return;
+       mDataBase = this.getWritableDatabase();
+    }
+
+    private void closedb() {
+       if (mDataBase.isOpen())
+           mDataBase.close();
+    }
       private void insertRow(int id, int pict_id, String place, String lat, String longi) {
-          SQLiteDatabase database = this.getWritableDatabase();
           ContentValues values = new ContentValues();
-          //values.put(COLUMN_ID,id);
           values.put(PICTURE_ID,pict_id);
           values.put(PICTURE_PLACE, place);
           values.put(PICTURE_LAT, lat);
           values.put(PICTURE_LONG, longi);
-          long val = database.insert(TABLE_GALLERY, null, values);
+          long val = mDataBase.insert(TABLE_GALLERY, null, values);
           if (-1 == val)
               Log.d(TAG, "Failed to Insert Row");
           else
               Log.d(TAG, "XXX Succesfully  Inserted Row : " + place);
-          database.close();
       }
+
+      private boolean checkIfPictureExists(int pict_id, String place) {
+         String data = null;
+          Cursor cursor = mDataBase.rawQuery(ROW_PICT_ID_EXISTS + pict_id, null);
+          if(!(cursor.getCount()<=0)){
+             cursor.moveToFirst();
+             int index = cursor.getColumnIndex(PICTURE_PLACE);
+             if (index != -1)
+               data = cursor.getString(index);
+             return ((data != null) && data.equalsIgnoreCase(place));
+          }
+          return false;
+      }
+
+      private String getPictureFromDB(int pict_id) {
+          String data = null;
+           Cursor cursor = mDataBase.rawQuery(ROW_PICT_ID_EXISTS + pict_id, null);
+           if(!(cursor.getCount()<=0)){
+              cursor.moveToFirst();
+              int index = cursor.getColumnIndex(PICTURE_PLACE);
+              if (index != -1)
+                data = cursor.getString(index);
+           }
+           return data;
+       }
 
       public static boolean isRowFound(int id, String place) {
           String placeFound = mMapCache.get(id);
