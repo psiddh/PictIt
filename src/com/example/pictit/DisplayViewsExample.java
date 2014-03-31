@@ -20,6 +20,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.location.Address;
 import android.media.ExifInterface;
+import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -94,6 +95,10 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
     private AsyncTask<Object, Bitmap, Object> mLoadImagesInBackground = null;
 
+    ConnectivityManager mConnectivityManager;
+
+    private DataBaseManager mDbHelper;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -106,6 +111,9 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         mUserFilter = filter;
         mAnalyzer = new UserFilterAnalyzer(filter);
         setProgressBarIndeterminateVisibility(true);
+
+        mConnectivityManager =  (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
+        mDbHelper = DataBaseManager.getInstance(this);
 
         /*mgridView = (GridView) findViewById(R.id.gridview);
         mgridView.setBackgroundColor(color.darker_gray);
@@ -643,6 +651,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 if ((mSupportGeoCoder)) { // && (mUserFilter.toLowerCase().contains(mPlaceFilter.toLowerCase()))) {
                    GeoDecoder geoDecoder = null;
                    String addr = null;
+                   Integer currentId = cur.getInt(id);
                    boolean alsoMatchCity = true; //mAnalyzer.isPrepositionKeywordFoundBeforePlace(mUserFilter);
                    //added = !alsoMatchCity;
                    List<Address> address;
@@ -663,23 +672,30 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                      && (attrLONGITUDE != null)
                      && (attrLONGITUDE_REF !=null)){
                        // It has some valid values
-                       // Try to read from Cache
-                       Integer currentId = cur.getInt(id);
-                       String placeFound = DataBaseManager.getPlace(currentId);
+                       // Try to read from Cache / db
+                       String placeFound = mDbHelper.getPlace(currentId);
                        if (placeFound == null) {
-                           // Place not found in cache but it has a valid GPS co-ordinates
-                       } else if(mUserFilter.toLowerCase().contains(placeFound.toLowerCase())){
-                           // Wow... we have the place in the Cache..
+                           // Place not found in cache or db ,but it has a valid GPS cod-ordinates
+                           // Try and fallback on GeoCoder API to retrieve the place.
+                       } else if(mUserFilter.toLowerCase().contains(placeFound.toLowerCase())) {
+                           // Wow... we have the place found either in the cache or db..
                            added = true;
                            break;
                        } else {
-                           // OK some place exists in cache /db but does not match in UserFilter
+                           // OK some place exists in cache / db but does not match with UserFilter
                            break;
                        }
                    } else {
                        continue;
                    }
 
+                   // Before we try to retrieve from Internet, check to see if there is active connection
+                   if ((mConnectivityManager.getActiveNetworkInfo() == null) ||
+                      !(mConnectivityManager.getActiveNetworkInfo().isConnectedOrConnecting())) {
+                      // mConnectivityManager.getActiveNetworkInfo() being null happens in airplane mode I guess
+                      Log.d(TAG,"Ooops No Connection.. Try Later");
+                      continue;
+                   }
                    try {
                            geoDecoder = new GeoDecoder(new ExifInterface(path));
                            if (!geoDecoder.isValid()) {
@@ -705,9 +721,20 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                            e.printStackTrace();
                    }
                    address = geoDecoder.getAddress(mContext);
-                   if ((address!= null && address.size() > 0) && (0 == mAnalyzer.compareUserFilterForCity(address.get(0).getLocality()))) {
+                   String locality = null;
+                   if (address!= null && address.size() > 0)
+                     locality = address.get(0).getLocality();
+                   if (locality != null) {
+                       // Try and insert to the d/b and cache
+                       mDbHelper.updateRow(currentId, locality);
+                   }
+                   if ((locality != null) && (0 == mAnalyzer.compareUserFilterForCity(locality))) {
                      // At this point, 'locality' / 'city' is matched.
                      // check 'dateRangeMatchFound' has been set or not
+
+                     // TBD: Insert this (id, place) row in database, however it may not be a good idea as potentially there is the
+                     // SyncIntentService worker thread updating the d/b. It is not a good idea for another thread (main thread) to
+                     // update the d/b without ensuring that db interface is thread safe !!!
                      if (dateRangeMatchFound != -1) {
                          // DateRange has been set
                          if ((dateRangeMatchFound == 0) && (alsoMatchCity)) {

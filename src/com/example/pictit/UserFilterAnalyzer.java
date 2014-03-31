@@ -291,7 +291,7 @@ public class UserFilterAnalyzer implements LogUtils{
     }
 
     public Pair<Long,Long> getDateRange(String compareString) {
-        if (DEBUG) Log.d(TAG, "getDateRange String : " + compareString);
+        //if (DEBUG) Log.d(TAG, "getDateRange String : " + compareString);
         int index = 0;
         int[] validRange = {0,0,0};
         int unknownCnt = 0;
@@ -332,7 +332,7 @@ public class UserFilterAnalyzer implements LogUtils{
               case KEYWORD_TODAY :
               case KEYWORD_SPECIAL:
               case KEYWORD_PHRASES_OTHER :
-                  if (DEBUG) Log.d(TAG, "Word : " + mWords[index] + " " +  getStringFromKeyWord(keyword_Val));
+                  //if (DEBUG) Log.d(TAG, "Word : " + mWords[index] + " " +  getStringFromKeyWord(keyword_Val));
                   break;
               default:
                   if (DEBUG && (mWords[index] != null)) Log.d(TAG, mWords[index] + " - Unknown Cnt : " + unknownCnt);
