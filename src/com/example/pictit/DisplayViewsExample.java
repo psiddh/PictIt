@@ -14,6 +14,7 @@ import android.content.CursorLoader;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.Loader;
+import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -30,6 +31,9 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Pair;
 import android.util.SparseBooleanArray;
+import android.view.ContextMenu;
+import android.view.ContextMenu.ContextMenuInfo;
+import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -37,7 +41,9 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.WindowManager;
 import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.BaseAdapter;
 import android.widget.CheckBox;
 import android.widget.GridView;
@@ -91,6 +97,8 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
      */
     private GridImageAdapter imageAdapter;
 
+    boolean mClickStateOnGridItemAShortPress = true;
+
     private UserFilterAnalyzer mAnalyzer;
 
     private AsyncTask<Object, Bitmap, Object> mLoadImagesInBackground = null;
@@ -98,6 +106,10 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     ConnectivityManager mConnectivityManager;
 
     private DataBaseManager mDbHelper;
+
+    Display mDisplay;
+    DisplayMetrics mOutMetrics;
+    float mDensity;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -114,6 +126,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
         mConnectivityManager =  (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
         mDbHelper = DataBaseManager.getInstance(this);
+        WindowManager wm = (WindowManager) this.getSystemService(Context.WINDOW_SERVICE);
+        Display mDisplay = wm.getDefaultDisplay();
+        mOutMetrics= new DisplayMetrics ();
+        mDisplay.getMetrics(mOutMetrics);
+        mDensity = this.getResources().getDisplayMetrics().density;
 
         /*mgridView = (GridView) findViewById(R.id.gridview);
         mgridView.setBackgroundColor(color.darker_gray);
@@ -183,7 +200,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         getWindowManager().getDefaultDisplay().getMetrics(metrics);
 
         //displayImages.setNumColumns(metrics.widthPixels/200);
-        displayImages.setNumColumns(3);
+        //displayImages.setNumColumns(3);
         //displayImages.setClipToPadding(false);
         displayImages.setBackgroundColor(Color.DKGRAY);
         displayImages.setChoiceMode(displayImages.CHOICE_MODE_MULTIPLE);
@@ -195,8 +212,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             public void onItemClick(AdapterView parent,
             View v, int position, long id)
             {
-                v.setBackgroundColor(Color.RED);
-                //v.setPressed(true);
+                mClickStateOnGridItemAShortPress = true;
                 Toast.makeText(getBaseContext(),
                         "pic" + (position + 1) + " selected",
                         Toast.LENGTH_SHORT).show();
@@ -207,6 +223,40 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 startActivity(intent);
             }
         });
+
+        displayImages.setOnItemLongClickListener(new OnItemLongClickListener() {
+            //this listener should show the context menu for a long click on the gridview.
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View v, int position, long id) {
+                   //return parent.showContextMenuForChild(v);
+                Toast.makeText(getBaseContext(),
+                        "pic" + (position + 1) + " selected - LONG KEY PRESS",
+                        Toast.LENGTH_SHORT).show();
+                mClickStateOnGridItemAShortPress = false;
+                v.setBackgroundColor(Color.RED);
+                v.animate();
+                v.setPressed(true);
+                //parent.showContextMenuForChild(v);
+                return true;
+
+            }
+        });
+    }
+
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
+        AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) menuInfo;
+
+        if(mClickStateOnGridItemAShortPress) {
+            //getMenuInflater().inflate(R.menu.context_standard, menu);
+            //menu.setHeaderTitle("Standard Menu for "+arr[info.position]);
+            //mClickStateOnGridItemAShortPress = false;
+        }
+        else {
+            mClickStateOnGridItemAShortPress = false;
+            //getMenuInflater().inflate(R.menu.context_options, menu);
+            //menu.setHeaderTitle("Options Menu for "+arr[info.position]);
+        }
     }
 
     @Override
@@ -233,7 +283,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         return cur;
     }
 
-    @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
         if (data != null) {
             mGridCount = data.getCount();
@@ -248,11 +297,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         //setupImageView();
     }
 
-    @Override
-    public Object onRetainNonConfigurationInstance() {
-        return null;
-
-    }
 
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
@@ -308,6 +352,12 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 break;
         }
         return false;
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        displayImages.setNumColumns(newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE ? 3 : 2);
+        super.onConfigurationChanged(newConfig);
     }
 
     // Call to update the share intent
@@ -372,21 +422,45 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             return position;
         }
 
-        /*public View getView(int position, View convertView, ViewGroup parent) {
+        public View getView(int position, View convertView, ViewGroup parent) {
             final ImageView imageView;
             if (convertView == null) {
                 imageView = new ImageView(mContext);
             } else {
                 imageView = (ImageView) convertView;
             }
-            imageView.setLayoutParams(new GridView.LayoutParams(260, 260));
-            imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            imageView.setPadding(4, 4, 4, 4);
+            int width1 = (int)mContext.getResources().getDimension(R.dimen.width);
+            int height1 = (int)mContext.getResources().getDimension(R.dimen.height);
+            if (position %2 == 0) {
+                //width = 200;
+                //height = 200;
+            }
+            //imageView.setLayoutParams(new GridView.LayoutParams(width,height));
+            //imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            //imageView.setPadding(4, 4, 4, 4);
+
             imageView.setImageBitmap(photos.get(position));
             imageView.setBackgroundColor(Color.TRANSPARENT);
+            imageView.setPadding(4, 4, 4, 4);
+            /*WindowManager wm = (WindowManager) mContext.getSystemService(Context.WINDOW_SERVICE);
+
+            Display display = wm.getDefaultDisplay();
+            DisplayMetrics outMetrics = new DisplayMetrics ();
+            display.getMetrics(outMetrics);
+            float density  = mContext.getResources().getDisplayMetrics().density;
+            float dpHeight = outMetrics.heightPixels / density;
+            float dpWidth  = outMetrics.widthPixels / density;
+
+            int width=(int) (dpWidth);
+            int height=(int) (dpHeight);
+
+            imageView.setLayoutParams(new GridView.LayoutParams(width,height));
+            imageView.setBackgroundColor(000000);
+            imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            imageView.setImageBitmap(photos.get(position));*/
             return imageView;
-        } */
-        public View getView(int position, View convertView, ViewGroup parent) {
+        }
+        /*public View getView(int position, View convertView, ViewGroup parent) {
             ViewHolder holder = new ViewHolder();
             if (convertView == null) {
                 convertView = mInflater.inflate(
@@ -438,7 +512,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             holder.checkbox.setChecked(true);
             holder.id = position;
             return convertView;
-        }
+        }*/
     }
 
     /**
@@ -554,7 +628,13 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                //LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
                bitmap = BitmapFactory.decodeByteArray(thumbnail, 0, thumbnail.length);
                if (bitmap != null) {
-                   newBitmap = Bitmap.createScaledBitmap(bitmap, 240, 240, true);
+
+                   float dpHeight = mOutMetrics.heightPixels / mDensity;
+                   float dpWidth  = mOutMetrics.widthPixels / mDensity;
+
+                   int width=(int) (dpWidth);
+                   int height=(int) (dpHeight);
+                   newBitmap = Bitmap.createScaledBitmap(bitmap, width-4, width-4, true);
                    bitmap.recycle();
                    if (newBitmap != null) {
                        return newBitmap;
@@ -568,7 +648,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                    imageUri = Uri.parse("file://" + path);
                    bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(imageUri));
                    if (bitmap != null) {
-                       newBitmap = Bitmap.createScaledBitmap(bitmap, 300, 300, true);
+                       newBitmap = Bitmap.createScaledBitmap(bitmap, 400, 400, true);
                        bitmap.recycle();
                        if (newBitmap != null) {
                            return newBitmap;

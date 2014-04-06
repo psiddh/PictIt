@@ -194,7 +194,8 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
                       if ((address!= null && address.size() > 0) && (address.get(0) != null)) {
                         // Fetched successfully from Internet
                         place = address.get(0).getLocality();
-                      }
+                      } else
+                        continue;
                       // Update the DB with pictureID and the place..but again check if it is really
                       // present in db again. This check 'getPictureFromDB' earlier should have sufficed.
                       // It doesn't hurt to absolutely check against 'pict_id' & 'place' in the db. If not
@@ -209,6 +210,15 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
           } while (!cur.isClosed() && cur.moveToNext());
           state = SyncState.SYNC_STATE_COMPLETED;
           closedb();
+          if (TEST_DB_INITIAL_CREATION_AND_CACHE_UPDATE_FOR_PLACE) {
+          int count =0;
+          for(String value: mMapCache.values()) {
+              if (value.equals("San Francisco")) {
+                count++;
+              }
+            }
+            Log.d(TAG,"******************** COUNT VALUES ... " + count);
+          }
       }
 
       private void deletedb() {
