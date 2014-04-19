@@ -87,7 +87,6 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
         database.execSQL("DROP TABLE IF EXISTS " + TABLE_GALLERY);
       database.execSQL(DATABASE_CREATE);
       mDataBase = database;
-      mConnectivityManager =  (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
       state = SyncState.SYNC_STATE_INITIATED;
     }
 
@@ -103,12 +102,15 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
     private void opendb() {
        if (mDataBase != null && mDataBase.isOpen())
           return;
+       if (DEBUG) Log.d(TAG,"yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy - DB Opened");
        mDataBase = this.getWritableDatabase();
     }
 
     private void closedb() {
-       if (mDataBase != null && mDataBase.isOpen() && state != SyncState.SYNC_STATE_INPROGRESS)
+       if (mDataBase != null && mDataBase.isOpen() && state != SyncState.SYNC_STATE_INPROGRESS) {
            mDataBase.close();
+           if (DEBUG) Log.d(TAG,"yyyyyyyyyyyyyyyyyy - DB Closed");
+       }
     }
       private void insertRow(int id, int pict_id, String place, String lat, String longi) {
           ContentValues values = new ContentValues();
@@ -125,15 +127,17 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
 
       private boolean checkIfPictureExists(int pict_id, String place) {
          String data = null;
+         boolean ret = false;
           Cursor cursor = mDataBase.rawQuery(ROW_PICT_ID_EXISTS + pict_id, null);
           if(!(cursor.getCount()<=0)){
              cursor.moveToFirst();
              int index = cursor.getColumnIndex(PICTURE_PLACE);
              if (index != -1)
                data = cursor.getString(index);
-             return ((data != null) && data.equalsIgnoreCase(place));
+             ret = ((data != null) && data.equalsIgnoreCase(place));
           }
-          return false;
+          cursor.close();
+          return ret;
       }
 
       private String getPictureFromDB(int pict_id) {
@@ -146,18 +150,23 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
               if (index != -1)
                 data = cursor.getString(index);
            }
+           cursor.close();
            return data;
       }
 
       private int countRowsinDB() {
            Cursor cursor = mDataBase.rawQuery(COUNT_ROWS,null);
-           return cursor.getCount();
+           int cnt = cursor.getCount();
+           cursor.close();
+           return cnt;
       }
 
       private void performSync(Cursor cur) {
+      opendb();
+      if (null == mConnectivityManager)
+        mConnectivityManager =  (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
           do {
               state = SyncState.SYNC_STATE_INPROGRESS;
-              opendb();
               if (cur.isClosed()) break;
               int id = cur.getInt(mId);
               String path = cur.getString(mDataColumn);
@@ -209,6 +218,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
               }
           } while (!cur.isClosed() && cur.moveToNext());
           state = SyncState.SYNC_STATE_COMPLETED;
+          cur.close();
           closedb();
           if (TEST_DB_INITIAL_CREATION_AND_CACHE_UPDATE_FOR_PLACE) {
           int count =0;

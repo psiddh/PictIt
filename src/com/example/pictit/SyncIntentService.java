@@ -22,8 +22,9 @@ public class SyncIntentService extends IntentService implements LogUtils {
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        mDbHelper.onCreate(mDbHelper.getWritableDatabase());
-        //mDbHelper.getWritableDatabase();
+		//mDbHelper.onCreate(mDbHelper.getWritableDatabase());
+		//mDbHelper = DataBaseManager.getInstance(getApplicationContext());
+		//mDbHelper.getWritableDatabase();
         mDbHelper.startSync();
     }
 }

@@ -31,6 +31,7 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Pair;
 import android.util.SparseBooleanArray;
+import android.view.ActionMode;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.Display;
@@ -46,6 +47,8 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.BaseAdapter;
 import android.widget.CheckBox;
+import android.widget.Checkable;
+import android.widget.FrameLayout;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.ShareActionProvider;
@@ -106,6 +109,8 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     ConnectivityManager mConnectivityManager;
 
     private DataBaseManager mDbHelper;
+
+    MenuItem mItem;
 
     Display mDisplay;
     DisplayMetrics mOutMetrics;
@@ -203,7 +208,13 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         //displayImages.setNumColumns(3);
         //displayImages.setClipToPadding(false);
         displayImages.setBackgroundColor(Color.DKGRAY);
-        displayImages.setChoiceMode(displayImages.CHOICE_MODE_MULTIPLE);
+        displayImages.setChoiceMode(displayImages.CHOICE_MODE_MULTIPLE_MODAL);
+        displayImages.setMultiChoiceModeListener(new MultiChoiceModeListener());
+        // Make GridView use your custom selector drawable
+        //displayImages.setSelector(getResources().getDrawable(R.drawable.selector_grid));
+        displayImages.setDrawSelectorOnTop(true);
+
+
         //displayImages.setVerticalSpacing(1);
         //displayImages.setHorizontalSpacing(1);
         //displayImages.setOnItemClickListener(DisplayViewsExample.this);
@@ -233,7 +244,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                         "pic" + (position + 1) + " selected - LONG KEY PRESS",
                         Toast.LENGTH_SHORT).show();
                 mClickStateOnGridItemAShortPress = false;
-                v.setBackgroundColor(Color.RED);
+                //v.setBackgroundColor(Color.RED);
                 v.animate();
                 v.setPressed(true);
                 //parent.showContextMenuForChild(v);
@@ -329,10 +340,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
         // Locate MenuItem with ShareActionProvider
-        MenuItem item = menu.findItem(R.id.menu_item_share);
+        mItem = menu.findItem(R.id.menu_item_share);
+        mItem.setEnabled(false);
         // Fetch and store ShareActionProvider
-        mShareActionProvider = (ShareActionProvider) item.getActionProvider();
-        setShareIntent(createShareIntent());
+        mShareActionProvider = (ShareActionProvider) mItem.getActionProvider();
+        //setShareIntent(createShareIntent());
         // Return true to display menu
         return true;
     }
@@ -386,6 +398,74 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
          return shareIntent;
     }
 
+    public class CheckableLayout extends FrameLayout implements Checkable {
+        private boolean mChecked;
+
+        public CheckableLayout(Context context) {
+            super(context);
+        }
+
+        public void setChecked(boolean checked) {
+            mChecked = checked;
+            //setBackgroundColor(Color.RED);
+
+            //setBackgroundDrawable(checked ? getResources().getDrawable(
+                    //R.drawable.blue) : null);
+        }
+
+        public boolean isChecked() {
+            return mChecked;
+        }
+
+        public void toggle() {
+            setChecked(!mChecked);
+        }
+
+    }
+
+    public class MultiChoiceModeListener implements
+            GridView.MultiChoiceModeListener {
+        public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+            mode.setTitle("Select Pictures");
+            mode.setSubtitle("1 picture selected");
+            return true;
+        }
+
+        public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+            return true;
+        }
+
+        public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+            return true;
+        }
+
+        public void onDestroyActionMode(ActionMode mode) {
+        }
+
+        public void onItemCheckedStateChanged(ActionMode mode, int position,
+                long id, boolean checked) {
+            int selectCount = displayImages.getCheckedItemCount();
+            switch (selectCount) {
+            case 1:
+                mode.setSubtitle("1 picture selected");
+                break;
+            default:
+                mode.setSubtitle("" + selectCount + " pictures selected");
+                break;
+            }
+            View v = displayImages.getChildAt(position);
+            displayImages.setSelection(position);
+
+            //v.setBackgroundResource(R.drawable.list_pressed);
+            //v.setEnabled(true);
+            /*View v = displayImages.getChildAt(position);
+            if (checked || (selectCount == 1))
+              v.setBackgroundColor(Color.RED);
+            else
+                v.setBackgroundColor(Color.TRANSPARENT);*/
+        }
+    }
+
     class ViewHolder {
         ImageView imageview;
         CheckBox checkbox;
@@ -424,10 +504,15 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
         public View getView(int position, View convertView, ViewGroup parent) {
             final ImageView imageView;
+            //CheckableLayout l;
             if (convertView == null) {
+                //l = new CheckableLayout(mContext);
                 imageView = new ImageView(mContext);
+                //l.addView(imageView);
             } else {
                 imageView = (ImageView) convertView;
+                //l = (CheckableLayout) convertView;
+                //imageView = (ImageView) l.getChildAt(0);
             }
             int width1 = (int)mContext.getResources().getDimension(R.dimen.width);
             int height1 = (int)mContext.getResources().getDimension(R.dimen.height);
@@ -440,8 +525,14 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             //imageView.setPadding(4, 4, 4, 4);
 
             imageView.setImageBitmap(photos.get(position));
-            imageView.setBackgroundColor(Color.TRANSPARENT);
-            imageView.setPadding(4, 4, 4, 4);
+
+            /*if (position == displayImages.getSelectedItemPosition())
+
+                imageView.setBackgroundColor(Color.RED);
+                else
+                    imageView.setBackgroundColor(Color.TRANSPARENT);*/
+            //imageView.setBackgroundColor(Color.TRANSPARENT);
+            //imageView.setPadding(4, 4, 4, 4);
             /*WindowManager wm = (WindowManager) mContext.getSystemService(Context.WINDOW_SERVICE);
 
             Display display = wm.getDefaultDisplay();
@@ -574,6 +665,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                   publishProgress(bmp);
                 }
             }
+            mCursor.close();
             return null;
         }
         /**
@@ -596,6 +688,8 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         @Override
         protected void onPostExecute(Object result) {
             setProgressBarIndeterminateVisibility(false);
+            setShareIntent(createShareIntent());
+            mItem.setEnabled(true);
         }
 
         @Override
@@ -634,13 +728,13 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
                    int width=(int) (dpWidth);
                    int height=(int) (dpHeight);
-                   newBitmap = Bitmap.createScaledBitmap(bitmap, width-4, width-4, true);
+                   newBitmap = Bitmap.createScaledBitmap(bitmap, width, width, true);
                    bitmap.recycle();
                    if (newBitmap != null) {
                        return newBitmap;
                    }
                }
-               //BitmapDrawable bmd = new BitmapDrawable(getResources(),bmpImg);
+               //BitmapDrawable bmd = new m (getResources(),bmpImg);
                return bitmap;
             } else {
                Uri imageUri = null;
