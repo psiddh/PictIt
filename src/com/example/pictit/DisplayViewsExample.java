@@ -407,8 +407,8 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
         public void setChecked(boolean checked) {
             mChecked = checked;
-            //setBackgroundColor(Color.RED);
-
+            //setForeground
+            setBackgroundColor(checked ? Color.YELLOW : Color.TRANSPARENT);
             //setBackgroundDrawable(checked ? getResources().getDrawable(
                     //R.drawable.blue) : null);
         }
@@ -503,16 +503,16 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         }
 
         public View getView(int position, View convertView, ViewGroup parent) {
-            final ImageView imageView;
-            //CheckableLayout l;
+            ImageView imageView ;
+            CheckableLayout l;
             if (convertView == null) {
-                //l = new CheckableLayout(mContext);
+                l = new CheckableLayout(mContext);
                 imageView = new ImageView(mContext);
-                //l.addView(imageView);
+                l.addView(imageView);
             } else {
-                imageView = (ImageView) convertView;
-                //l = (CheckableLayout) convertView;
-                //imageView = (ImageView) l.getChildAt(0);
+                //imageView = (ImageView) convertView;
+                l = (CheckableLayout) convertView;
+                imageView = (ImageView) l.getChildAt(0);
             }
             int width1 = (int)mContext.getResources().getDimension(R.dimen.width);
             int height1 = (int)mContext.getResources().getDimension(R.dimen.height);
@@ -521,8 +521,15 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 //height = 200;
             }
             //imageView.setLayoutParams(new GridView.LayoutParams(width,height));
-            //imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            //imageView.setPadding(4, 4, 4, 4);
+            imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            int orientation = getResources().getConfiguration().orientation;
+            int left =4,top = 4,right =4,bottom = 4;
+            if (orientation == 0x02) {
+               right = left = 2;
+            } else {
+               top = bottom = 2;
+            }
+            imageView.setPadding(left,top,right,bottom);
 
             imageView.setImageBitmap(photos.get(position));
 
@@ -549,7 +556,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             imageView.setBackgroundColor(000000);
             imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
             imageView.setImageBitmap(photos.get(position));*/
-            return imageView;
+            return l;
         }
         /*public View getView(int position, View convertView, ViewGroup parent) {
             ViewHolder holder = new ViewHolder();
