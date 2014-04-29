@@ -1,10 +1,9 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android" >
 
-    <item
-        android:id="@+id/action_settings"
-        android:orderInCategory="100"
-        android:showAsAction="never"
-        android:title="@string/action_settings"/>
+   <item android:id="@+id/menu_item_pick_all"
+       android:icon="@drawable/ic_menu_selectall_holo_dark"
+     android:title="PICK-ALL"
+     android:showAsAction="always"/>
     
    <item  
      android:id="@+id/menu_item_share"  
@@ -12,9 +11,9 @@
      android:showAsAction="ifRoom"  
      android:title="Share"/> 
      
-       <item android:id="@+id/menu_search"
-        android:icon="@android:drawable/ic_menu_search"
-        android:title="SearchWifiP2P" 
-        android:showAsAction="ifRoom"/>
+    <item android:id="@+id/menu_item_search"
+     android:icon="@android:drawable/ic_menu_search"
+     android:title="SearchWifiP2P"
+     android:showAsAction="ifRoom"/>
 
 </menu>

@@ -37,6 +37,7 @@ import android.view.ContextMenu.ContextMenuInfo;
 import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -100,6 +101,13 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
      */
     private GridImageAdapter imageAdapter;
 
+    private enum SelectState {
+           ALL,
+           CHERRY_PICK,
+           NONE
+    }
+
+    SelectState mState = SelectState.NONE;
     boolean mClickStateOnGridItemAShortPress = true;
 
     private UserFilterAnalyzer mAnalyzer;
@@ -167,6 +175,16 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         super.onPause();
         if (!mLoadImagesInBackground.isCancelled()) {
         }
+        //setShareIntent(null);
+        //mItem.setVisible(false);
+        //invalidateOptionsMenu();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        setShareIntent(createShareIntent());
+        //mItem.setVisible(false);
     }
 
     @Override
@@ -243,6 +261,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 Toast.makeText(getBaseContext(),
                         "pic" + (position + 1) + " selected - LONG KEY PRESS",
                         Toast.LENGTH_SHORT).show();
+                mState = SelectState.CHERRY_PICK;
                 mClickStateOnGridItemAShortPress = false;
                 //v.setBackgroundColor(Color.RED);
                 v.animate();
@@ -355,7 +374,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
-            case R.id.menu_search:
+            case R.id.menu_item_pick_all:
+                mState = SelectState.ALL;
+                selectAll();
+                return true;
+            case R.id.menu_item_search:
                 Intent intent = new Intent(getBaseContext(), WiFiDirectActivity.class);
                 intent.putStringArrayListExtra("image_paths", mList);
                 startActivity(intent);
@@ -370,6 +393,13 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     public void onConfigurationChanged(Configuration newConfig) {
         displayImages.setNumColumns(newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE ? 3 : 2);
         super.onConfigurationChanged(newConfig);
+    }
+
+    private void selectAll() {
+        for(int i=0; i < imageAdapter.getCount(); i++) {
+            displayImages.setItemChecked(i, true);
+        }
+        return;
     }
 
     // Call to update the share intent
@@ -399,7 +429,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     }
 
     public class CheckableLayout extends FrameLayout implements Checkable {
-        private boolean mChecked;
+        private boolean mChecked = false;
 
         public CheckableLayout(Context context) {
             super(context);
@@ -408,9 +438,13 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         public void setChecked(boolean checked) {
             mChecked = checked;
             //setForeground
-            setBackgroundColor(checked ? Color.YELLOW : Color.TRANSPARENT);
-            //setBackgroundDrawable(checked ? getResources().getDrawable(
-                    //R.drawable.blue) : null);
+            //setBackgroundColor(checked ? Color.YELLOW : Color.TRANSPARENT);
+            if (checked) {
+              setBackground(getResources().getDrawable(R.drawable.bggrid));
+            } else {
+                setBackground(null);
+            }
+            refreshDrawableState();
         }
 
         public boolean isChecked() {
@@ -426,16 +460,39 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     public class MultiChoiceModeListener implements
             GridView.MultiChoiceModeListener {
         public boolean onCreateActionMode(ActionMode mode, Menu menu) {
-            mode.setTitle("Select Pictures");
-            mode.setSubtitle("1 picture selected");
+            String state = (mState == SelectState.ALL) ? "Multi-Select " : "Cherry-Pick ";
+            mode.setTitle(state + "Pictures");
+            //mode.setSubtitle("1 Picture picked");
+            MenuInflater inflater = getMenuInflater();
+            inflater.inflate(R.menu.contextual_actions, menu);
             return true;
         }
 
         public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+            mState = SelectState.CHERRY_PICK;
             return true;
         }
 
         public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+            switch (item.getItemId()) {
+              case R.id.cab_action_done:
+                  int selectCount = displayImages.getCheckedItemCount();
+                  Log.d(TAG, "Selected Items " + selectCount);
+                  SparseBooleanArray checkedItems = displayImages.getCheckedItemPositions();
+                  if (checkedItems != null) {
+                      for (int i=0; i<checkedItems.size(); i++) {
+                          int test = checkedItems.keyAt(i);
+                          if (checkedItems.valueAt(i)) {
+                              String item1 = displayImages.getAdapter().getItem(
+                                                    checkedItems.keyAt(i)).toString();
+                              Log.i(TAG,item + " was selected");
+                          }
+                      }
+                  }
+                  break;
+              default:
+                  break;
+            }
             return true;
         }
 
@@ -445,24 +502,15 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         public void onItemCheckedStateChanged(ActionMode mode, int position,
                 long id, boolean checked) {
             int selectCount = displayImages.getCheckedItemCount();
+            String operation = (mState == SelectState.ALL) ? "selected" : "picked";
             switch (selectCount) {
             case 1:
-                mode.setSubtitle("1 picture selected");
+                mode.setSubtitle("1 " + operation);
                 break;
             default:
-                mode.setSubtitle("" + selectCount + " pictures selected");
+                mode.setSubtitle("" + selectCount + " " + operation);
                 break;
             }
-            View v = displayImages.getChildAt(position);
-            displayImages.setSelection(position);
-
-            //v.setBackgroundResource(R.drawable.list_pressed);
-            //v.setEnabled(true);
-            /*View v = displayImages.getChildAt(position);
-            if (checked || (selectCount == 1))
-              v.setBackgroundColor(Color.RED);
-            else
-                v.setBackgroundColor(Color.TRANSPARENT);*/
         }
     }
 
@@ -525,13 +573,25 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             int orientation = getResources().getConfiguration().orientation;
             int left =4,top = 4,right =4,bottom = 4;
             if (orientation == 0x02) {
-               right = left = 2;
+               right = left = 4;
             } else {
-               top = bottom = 2;
+               top = bottom = 4;
             }
             imageView.setPadding(left,top,right,bottom);
 
             imageView.setImageBitmap(photos.get(position));
+
+            if (mState == SelectState.ALL) {
+                //l.setChecked(true);
+                //l.toggle();
+                //l.invalidate();//(getResources().getDrawable(
+                        //R.drawable.bggrid));
+            }
+            else if (mState == SelectState.NONE) {
+                //imageView.setBackground(null);
+            } else {
+
+            }
 
             /*if (position == displayImages.getSelectedItemPosition())
 

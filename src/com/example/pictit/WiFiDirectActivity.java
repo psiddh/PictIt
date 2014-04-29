@@ -127,7 +127,7 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
                 }
                 return true;
 
-            case R.id.menu_search:
+            case R.id.menu_item_search:
                 if (!isWifiP2pEnabled) {
                     Toast.makeText(WiFiDirectActivity.this, R.string.p2p_off_warning,
                             Toast.LENGTH_SHORT).show();

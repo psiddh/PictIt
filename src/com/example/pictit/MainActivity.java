@@ -92,7 +92,7 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.main, menu);
+        //getMenuInflater().inflate(R.menu.main, menu);
         mProgress = (ProgressBar) findViewById(R.id.progressBar1);
         // Locate MenuItem with ShareActionProvider
         /*MenuItem item = menu.findItem(R.id.menu_item_share);
@@ -181,6 +181,7 @@ public class MainActivity extends Activity implements LoaderCallbacks<Cursor>{
         // Handle your other action bar items...
         return super.onOptionsItemSelected(item);
     }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

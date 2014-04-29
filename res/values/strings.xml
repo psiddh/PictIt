@@ -21,6 +21,7 @@
     <string name="label_me">ME</string>
     <string name="label_peers">PEERS</string>
      <string name="Go">Good to go</string>
+     <string name="done">done</string>
     
     <string-array name="events_array">
         <item>Create </item>
