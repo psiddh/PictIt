@@ -6,6 +6,7 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 
+import android.app.ActionBar.LayoutParams;
 import android.app.Activity;
 import android.app.LoaderManager.LoaderCallbacks;
 import android.content.BroadcastReceiver;
@@ -18,7 +19,9 @@ import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.location.Address;
 import android.media.ExifInterface;
 import android.net.ConnectivityManager;
@@ -50,6 +53,7 @@ import android.widget.BaseAdapter;
 import android.widget.CheckBox;
 import android.widget.Checkable;
 import android.widget.FrameLayout;
+import android.widget.Gallery;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.ShareActionProvider;
@@ -175,15 +179,15 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         super.onPause();
         if (!mLoadImagesInBackground.isCancelled()) {
         }
-        //setShareIntent(null);
-        //mItem.setVisible(false);
+        setShareIntent(null);
+        mItem.setVisible(false);
         //invalidateOptionsMenu();
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        setShareIntent(createShareIntent());
+        //setShareIntent(createShareIntent());
         //mItem.setVisible(false);
     }
 
@@ -227,7 +231,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         //displayImages.setClipToPadding(false);
         displayImages.setBackgroundColor(Color.DKGRAY);
         displayImages.setChoiceMode(displayImages.CHOICE_MODE_MULTIPLE_MODAL);
-        displayImages.setMultiChoiceModeListener(new MultiChoiceModeListener());
+        displayImages.setMultiChoiceModeListener(new MultiChoiceModeListener(this));
         // Make GridView use your custom selector drawable
         //displayImages.setSelector(getResources().getDrawable(R.drawable.selector_grid));
         displayImages.setDrawSelectorOnTop(true);
@@ -444,7 +448,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             } else {
                 setBackground(null);
             }
-            refreshDrawableState();
+            //refreshDrawableState();
         }
 
         public boolean isChecked() {
@@ -459,12 +463,17 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
     public class MultiChoiceModeListener implements
             GridView.MultiChoiceModeListener {
+        DisplayViewsExample activity;
+        MultiChoiceModeListener(DisplayViewsExample act) {
+            activity = act;
+        }
+
         public boolean onCreateActionMode(ActionMode mode, Menu menu) {
             String state = (mState == SelectState.ALL) ? "Multi-Select " : "Cherry-Pick ";
-            mode.setTitle(state + "Pictures");
+            mode.setTitle(state + "Mode");
             //mode.setSubtitle("1 Picture picked");
-            MenuInflater inflater = getMenuInflater();
-            inflater.inflate(R.menu.contextual_actions, menu);
+            //MenuInflater inflater = getMenuInflater();
+            //inflater.inflate(R.menu.contextual_actions, menu);
             return true;
         }
 
@@ -474,29 +483,46 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         }
 
         public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
-            switch (item.getItemId()) {
-              case R.id.cab_action_done:
-                  int selectCount = displayImages.getCheckedItemCount();
-                  Log.d(TAG, "Selected Items " + selectCount);
-                  SparseBooleanArray checkedItems = displayImages.getCheckedItemPositions();
-                  if (checkedItems != null) {
-                      for (int i=0; i<checkedItems.size(); i++) {
-                          int test = checkedItems.keyAt(i);
-                          if (checkedItems.valueAt(i)) {
-                              String item1 = displayImages.getAdapter().getItem(
-                                                    checkedItems.keyAt(i)).toString();
-                              Log.i(TAG,item + " was selected");
-                          }
-                      }
-                  }
-                  break;
-              default:
-                  break;
-            }
             return true;
         }
 
         public void onDestroyActionMode(ActionMode mode) {
+            int selectCount = displayImages.getCheckedItemCount();
+            Log.d(TAG, "Selected Items " + selectCount);
+            if (selectCount > 0) {
+                setShareIntent(createShareIntent());
+                activity.setTitle(selectCount + " Pictures Selected");
+                SparseBooleanArray checkedItems = displayImages.getCheckedItemPositions();
+                if (checkedItems != null) {
+                    for (int i=0; i<checkedItems.size(); i++) {
+                        int position = checkedItems.keyAt(i);
+                        if (checkedItems.valueAt(i)) {
+                            CheckableLayout l = (CheckableLayout) displayImages.getChildAt(position);
+                            if (l == null) continue;
+                            ImageView imageView = (ImageView) l.getChildAt(0);
+                            if (imageView != null) {
+                               Drawable draw = getResources().getDrawable(R.drawable.good_to_go);
+                               //Bitmap b = BitmapFactory.decodeResource(getResources(), R.drawable.bggrid);
+                               //imageView.setImageBitmap(b);
+                               //Canvas c = new Canvas(b);
+                               //imageView.draw(c); //setImageDrawable(draw);
+                               //imageView.setAdjustViewBounds(true); // set the ImageView bounds to match the Drawable's dimensions
+                               //imageView.setLayoutParams(new GridView.LayoutParams(400,400));
+                               //l.setForeground(draw);
+                               // Add the ImageView to the layout and set the layout as the content view
+                               //l.addView(imageView);
+                               //l.setBackground(draw);
+                               //imageView.setImageDrawable(draw);
+                               //imageView.invalidateDrawable(draw);
+                               //imageView.setTag(draw);
+                            }
+                            //v.setBackground(getResources().getDrawable(R.drawable.bggrid));
+                            Log.i(TAG,"Position :" + position  + " was selected");
+                        }
+                    }
+                }
+                //displayImages.invalidate();
+            }
         }
 
         public void onItemCheckedStateChanged(ActionMode mode, int position,
@@ -562,6 +588,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 l = (CheckableLayout) convertView;
                 imageView = (ImageView) l.getChildAt(0);
             }
+
             int width1 = (int)mContext.getResources().getDimension(R.dimen.width);
             int height1 = (int)mContext.getResources().getDimension(R.dimen.height);
             if (position %2 == 0) {
@@ -578,8 +605,21 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                top = bottom = 4;
             }
             imageView.setPadding(left,top,right,bottom);
-
             imageView.setImageBitmap(photos.get(position));
+
+            // Bad Code... Fix it ASAP
+            /*SparseBooleanArray checkedItems = displayImages.getCheckedItemPositions();
+            if (checkedItems != null) {
+                    int position1 = checkedItems.keyAt(position);
+                    //if (checkedItems.valueAt(position)) {
+                    //}
+            //if (l.isChecked() ) {
+                 Drawable draw = getResources().getDrawable(R.drawable.good_to_go);
+                 //l.setForegroundGravity(0x11);
+                 l.setForeground(draw);
+            } else {
+                l.setForeground(null);
+            }*/
 
             if (mState == SelectState.ALL) {
                 //l.setChecked(true);
@@ -755,7 +795,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         @Override
         protected void onPostExecute(Object result) {
             setProgressBarIndeterminateVisibility(false);
-            setShareIntent(createShareIntent());
+            //setShareIntent(createShareIntent());
             mItem.setEnabled(true);
         }
 
@@ -783,18 +823,18 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             }
 
             String dateString = intf.getAttribute(ExifInterface.TAG_DATETIME);
-            if (DEBUG) Log.d(TAG, dateString);
+            if (DEBUG && (null != dateString)) Log.d(TAG, dateString);
+            float dpHeight = mOutMetrics.heightPixels / mDensity;
+            float dpWidth  = mOutMetrics.widthPixels / mDensity;
+
+            int width=(int) (dpWidth);
+            int height=(int) (dpHeight);
             if (intf.hasThumbnail()) {
                byte[] thumbnail = intf.getThumbnail();
                //LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
                bitmap = BitmapFactory.decodeByteArray(thumbnail, 0, thumbnail.length);
                if (bitmap != null) {
 
-                   float dpHeight = mOutMetrics.heightPixels / mDensity;
-                   float dpWidth  = mOutMetrics.widthPixels / mDensity;
-
-                   int width=(int) (dpWidth);
-                   int height=(int) (dpHeight);
                    newBitmap = Bitmap.createScaledBitmap(bitmap, width, width, true);
                    bitmap.recycle();
                    if (newBitmap != null) {
@@ -809,7 +849,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                    imageUri = Uri.parse("file://" + path);
                    bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(imageUri));
                    if (bitmap != null) {
-                       newBitmap = Bitmap.createScaledBitmap(bitmap, 400, 400, true);
+                       newBitmap = Bitmap.createScaledBitmap(bitmap, width, width, true);
                        bitmap.recycle();
                        if (newBitmap != null) {
                            return newBitmap;
