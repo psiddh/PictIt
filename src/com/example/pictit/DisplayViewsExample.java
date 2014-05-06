@@ -6,7 +6,6 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 
-import android.app.ActionBar.LayoutParams;
 import android.app.Activity;
 import android.app.LoaderManager.LoaderCallbacks;
 import android.content.BroadcastReceiver;
@@ -19,9 +18,7 @@ import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.drawable.Drawable;
 import android.location.Address;
 import android.media.ExifInterface;
 import android.net.ConnectivityManager;
@@ -40,10 +37,8 @@ import android.view.ContextMenu.ContextMenuInfo;
 import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
@@ -53,7 +48,6 @@ import android.widget.BaseAdapter;
 import android.widget.CheckBox;
 import android.widget.Checkable;
 import android.widget.FrameLayout;
-import android.widget.Gallery;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.ShareActionProvider;
@@ -180,15 +174,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         if (!mLoadImagesInBackground.isCancelled()) {
         }
         setShareIntent(null);
-        mItem.setVisible(false);
-        //invalidateOptionsMenu();
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        //setShareIntent(createShareIntent());
-        //mItem.setVisible(false);
     }
 
     @Override
@@ -231,7 +221,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         //displayImages.setClipToPadding(false);
         displayImages.setBackgroundColor(Color.DKGRAY);
         displayImages.setChoiceMode(displayImages.CHOICE_MODE_MULTIPLE_MODAL);
-        displayImages.setMultiChoiceModeListener(new MultiChoiceModeListener(this));
+        displayImages.setMultiChoiceModeListener(new MultiChoiceModeListener());
         // Make GridView use your custom selector drawable
         //displayImages.setSelector(getResources().getDrawable(R.drawable.selector_grid));
         displayImages.setDrawSelectorOnTop(true);
@@ -360,15 +350,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.main, menu);
-        // Locate MenuItem with ShareActionProvider
-        mItem = menu.findItem(R.id.menu_item_share);
-        mItem.setEnabled(false);
-        // Fetch and store ShareActionProvider
-        mShareActionProvider = (ShareActionProvider) mItem.getActionProvider();
-        //setShareIntent(createShareIntent());
-        // Return true to display menu
+        getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
 
@@ -382,11 +364,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 mState = SelectState.ALL;
                 selectAll();
                 return true;
-            case R.id.menu_item_search:
+            /*case R.id.menu_item_search:
                 Intent intent = new Intent(getBaseContext(), WiFiDirectActivity.class);
                 intent.putStringArrayListExtra("image_paths", mList);
                 startActivity(intent);
-                return true;
+                return true;*/
             default:
                 break;
         }
@@ -413,10 +395,34 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
          }
     }
 
+    private Intent createCheckedItemsIntent() {
+        int selectCount = displayImages.getCheckedItemCount();
+        Log.d(TAG, "Selected Items " + selectCount);
+        if (selectCount > 0) {
+            Intent shareIntent = new Intent();
+            shareIntent.setAction(Intent.ACTION_SEND_MULTIPLE);
+            SparseBooleanArray checkedItems = displayImages.getCheckedItemPositions();
+            if (checkedItems != null) {
+                mImageUris.clear();
+                for (int index = 0; index < checkedItems.size(); index++) {
+                    int position = checkedItems.keyAt(index);
+                    if(position <= mList.size() && checkedItems.valueAt(index)) {
+                        Uri imageUri = Uri.parse("file://" + mList.get(position));
+                        mImageUris.add(imageUri);
+                    }
+                }
+                shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, mImageUris);
+                shareIntent.setType("image/jpeg");
+                return shareIntent;
+            }
+        }
+        return null;
+    }
+
     private Intent createShareIntent() {
          //Intent shareIntent = new Intent(Intent.ACTION_SEND);
         Intent shareIntent = new Intent();
-         shareIntent.setAction(Intent.ACTION_SEND_MULTIPLE);
+        shareIntent.setAction(Intent.ACTION_SEND_MULTIPLE);
 
 
          for (int i = 0; i < mList.size(); i++) {
@@ -441,14 +447,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
         public void setChecked(boolean checked) {
             mChecked = checked;
-            //setForeground
-            //setBackgroundColor(checked ? Color.YELLOW : Color.TRANSPARENT);
             if (checked) {
               setBackground(getResources().getDrawable(R.drawable.bggrid));
             } else {
                 setBackground(null);
             }
-            //refreshDrawableState();
         }
 
         public boolean isChecked() {
@@ -463,17 +466,20 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
     public class MultiChoiceModeListener implements
             GridView.MultiChoiceModeListener {
-        DisplayViewsExample activity;
-        MultiChoiceModeListener(DisplayViewsExample act) {
-            activity = act;
-        }
-
         public boolean onCreateActionMode(ActionMode mode, Menu menu) {
             String state = (mState == SelectState.ALL) ? "Multi-Select " : "Cherry-Pick ";
             mode.setTitle(state + "Mode");
             //mode.setSubtitle("1 Picture picked");
             //MenuInflater inflater = getMenuInflater();
             //inflater.inflate(R.menu.contextual_actions, menu);
+
+            // Inflate the menu; this adds items to the action bar if it is present.
+            getMenuInflater().inflate(R.menu.menu_select_mode, menu);
+            // Locate MenuItem with ShareActionProvider
+            mItem = menu.findItem(R.id.menu_item_share);
+            mItem.setEnabled(true);
+            // Fetch and store ShareActionProvider
+            mShareActionProvider = (ShareActionProvider) mItem.getActionProvider();
             return true;
         }
 
@@ -483,46 +489,12 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         }
 
         public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
-            return true;
+            return false;
         }
 
         public void onDestroyActionMode(ActionMode mode) {
-            int selectCount = displayImages.getCheckedItemCount();
-            Log.d(TAG, "Selected Items " + selectCount);
-            if (selectCount > 0) {
-                setShareIntent(createShareIntent());
-                activity.setTitle(selectCount + " Pictures Selected");
-                SparseBooleanArray checkedItems = displayImages.getCheckedItemPositions();
-                if (checkedItems != null) {
-                    for (int i=0; i<checkedItems.size(); i++) {
-                        int position = checkedItems.keyAt(i);
-                        if (checkedItems.valueAt(i)) {
-                            CheckableLayout l = (CheckableLayout) displayImages.getChildAt(position);
-                            if (l == null) continue;
-                            ImageView imageView = (ImageView) l.getChildAt(0);
-                            if (imageView != null) {
-                               Drawable draw = getResources().getDrawable(R.drawable.good_to_go);
-                               //Bitmap b = BitmapFactory.decodeResource(getResources(), R.drawable.bggrid);
-                               //imageView.setImageBitmap(b);
-                               //Canvas c = new Canvas(b);
-                               //imageView.draw(c); //setImageDrawable(draw);
-                               //imageView.setAdjustViewBounds(true); // set the ImageView bounds to match the Drawable's dimensions
-                               //imageView.setLayoutParams(new GridView.LayoutParams(400,400));
-                               //l.setForeground(draw);
-                               // Add the ImageView to the layout and set the layout as the content view
-                               //l.addView(imageView);
-                               //l.setBackground(draw);
-                               //imageView.setImageDrawable(draw);
-                               //imageView.invalidateDrawable(draw);
-                               //imageView.setTag(draw);
-                            }
-                            //v.setBackground(getResources().getDrawable(R.drawable.bggrid));
-                            Log.i(TAG,"Position :" + position  + " was selected");
-                        }
-                    }
-                }
-                //displayImages.invalidate();
-            }
+            setShareIntent(null);
+            mItem.setEnabled(false);
         }
 
         public void onItemCheckedStateChanged(ActionMode mode, int position,
@@ -537,6 +509,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 mode.setSubtitle("" + selectCount + " " + operation);
                 break;
             }
+            setShareIntent(createCheckedItemsIntent());
         }
     }
 
@@ -606,39 +579,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             }
             imageView.setPadding(left,top,right,bottom);
             imageView.setImageBitmap(photos.get(position));
-
-            // Bad Code... Fix it ASAP
-            /*SparseBooleanArray checkedItems = displayImages.getCheckedItemPositions();
-            if (checkedItems != null) {
-                    int position1 = checkedItems.keyAt(position);
-                    //if (checkedItems.valueAt(position)) {
-                    //}
-            //if (l.isChecked() ) {
-                 Drawable draw = getResources().getDrawable(R.drawable.good_to_go);
-                 //l.setForegroundGravity(0x11);
-                 l.setForeground(draw);
-            } else {
-                l.setForeground(null);
-            }*/
-
-            if (mState == SelectState.ALL) {
-                //l.setChecked(true);
-                //l.toggle();
-                //l.invalidate();//(getResources().getDrawable(
-                        //R.drawable.bggrid));
-            }
-            else if (mState == SelectState.NONE) {
-                //imageView.setBackground(null);
-            } else {
-
-            }
-
-            /*if (position == displayImages.getSelectedItemPosition())
-
-                imageView.setBackgroundColor(Color.RED);
-                else
-                    imageView.setBackgroundColor(Color.TRANSPARENT);*/
-            //imageView.setBackgroundColor(Color.TRANSPARENT);
             //imageView.setPadding(4, 4, 4, 4);
             /*WindowManager wm = (WindowManager) mContext.getSystemService(Context.WINDOW_SERVICE);
 
@@ -795,8 +735,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         @Override
         protected void onPostExecute(Object result) {
             setProgressBarIndeterminateVisibility(false);
-            //setShareIntent(createShareIntent());
-            mItem.setEnabled(true);
         }
 
         @Override

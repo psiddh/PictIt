@@ -102,8 +102,6 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.main, menu);
         return true;
     }
 
@@ -111,7 +109,8 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
      * (non-Javadoc)
      * @see android.app.Activity#onOptionsItemSelected(android.view.MenuItem)
      */
-    @Override
+    //@Override
+    /*
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case 1:
@@ -154,7 +153,7 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
             default:
                 return super.onOptionsItemSelected(item);
         }
-    }
+    }*/
 
     public void onInitiateDiscovery() {
         if (progressDialog != null && progressDialog.isShowing()) {
