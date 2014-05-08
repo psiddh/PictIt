@@ -25,8 +25,8 @@
         android:layout_centerInParent="true"
         android:text="@string/pictor"
         android:src="@drawable/ic_device_access_mic"
-        android:maxHeight="50dp"
-        android:maxWidth="50dp"
+        android:minHeight="100dp"
+        android:minWidth="100dp"
         android:background="@drawable/buttoncircle" />
 
     <EditText
