@@ -350,7 +350,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_main, menu);
+        getMenuInflater().inflate(R.menu.menu_display_view, menu);
         return true;
     }
 
