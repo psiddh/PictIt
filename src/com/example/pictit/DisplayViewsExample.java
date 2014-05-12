@@ -78,12 +78,16 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     // Today
     String mTodayFilter = "Today";
 
-    // Place
-    String mPlaceFilter = "Place";
-
-    //        Vs
-
     String mUserFilter;
+
+    Pair<Long, Long> mPairRange = null;
+
+    DateRangeManager mRangeMgr = new DateRangeManager();
+
+    Pair<Long, Long> mTodayPair = mRangeMgr.getToday();
+
+    Pair<Long, Long> mLastWeekEnd = mRangeMgr.getLastWeekEnd();
+
     // ************************************************************************
 
     ArrayList<Uri> mImageUris = new ArrayList<Uri>();
@@ -93,11 +97,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     /**
      * Grid view holding the images.
      */
-    private GridView displayImages;
+    private GridView mDisplayImages;
     /**
      * Image adapter for the grid view.
      */
-    private GridImageAdapter imageAdapter;
+    private GridImageAdapter mImageAdapter;
 
     private enum SelectState {
            ALL,
@@ -133,6 +137,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         String filter = intent.getExtras().getString("filter");
         mUserFilter = filter;
         mAnalyzer = new UserFilterAnalyzer(filter);
+        mPairRange = mAnalyzer.getDateRange(mUserFilter);
         setProgressBarIndeterminateVisibility(true);
 
         mConnectivityManager =  (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -212,25 +217,25 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
      * Setup the grid view.
      */
     private void setupViews() {
-        displayImages = (GridView) findViewById(R.id.gridview);
+        mDisplayImages = (GridView) findViewById(R.id.gridview);
         DisplayMetrics metrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(metrics);
 
-        //displayImages.setNumColumns(metrics.widthPixels/200);
-        //displayImages.setNumColumns(3);
-        //displayImages.setClipToPadding(false);
-        displayImages.setBackgroundColor(Color.DKGRAY);
-        displayImages.setChoiceMode(displayImages.CHOICE_MODE_MULTIPLE_MODAL);
-        displayImages.setMultiChoiceModeListener(new MultiChoiceModeListener());
+        //mDisplayImages.setNumColumns(metrics.widthPixels/200);
+        //mDisplayImages.setNumColumns(3);
+        //mDisplayImages.setClipToPadding(false);
+        mDisplayImages.setBackgroundColor(Color.DKGRAY);
+        mDisplayImages.setChoiceMode(mDisplayImages.CHOICE_MODE_MULTIPLE_MODAL);
+        mDisplayImages.setMultiChoiceModeListener(new MultiChoiceModeListener());
         // Make GridView use your custom selector drawable
-        //displayImages.setSelector(getResources().getDrawable(R.drawable.selector_grid));
-        displayImages.setDrawSelectorOnTop(true);
+        //mDisplayImages.setSelector(getResources().getDrawable(R.drawable.selector_grid));
+        mDisplayImages.setDrawSelectorOnTop(true);
 
 
-        //displayImages.setVerticalSpacing(1);
-        //displayImages.setHorizontalSpacing(1);
-        //displayImages.setOnItemClickListener(DisplayViewsExample.this);
-        displayImages.setOnItemClickListener(new OnItemClickListener()
+        //mDisplayImages.setVerticalSpacing(1);
+        //mDisplayImages.setHorizontalSpacing(1);
+        //mDisplayImages.setOnItemClickListener(DisplayViewsExample.this);
+        mDisplayImages.setOnItemClickListener(new OnItemClickListener()
         {
             public void onItemClick(AdapterView parent,
             View v, int position, long id)
@@ -247,7 +252,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             }
         });
 
-        displayImages.setOnItemLongClickListener(new OnItemLongClickListener() {
+        mDisplayImages.setOnItemLongClickListener(new OnItemLongClickListener() {
             //this listener should show the context menu for a long click on the gridview.
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View v, int position, long id) {
@@ -313,8 +318,8 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             setupCursor(data);
 
             new LoadImagesInBackGround(data, this).execute();
-            imageAdapter = new GridImageAdapter(getApplicationContext());
-            displayImages.setAdapter(imageAdapter);
+            mImageAdapter = new GridImageAdapter(getApplicationContext());
+            mDisplayImages.setAdapter(mImageAdapter);
         } else {
             //imagePath = imageUri.getPath();
         }
@@ -377,13 +382,13 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
-        displayImages.setNumColumns(newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE ? 3 : 2);
+        mDisplayImages.setNumColumns(newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE ? 3 : 2);
         super.onConfigurationChanged(newConfig);
     }
 
     private void selectAll() {
-        for(int i=0; i < imageAdapter.getCount(); i++) {
-            displayImages.setItemChecked(i, true);
+        for(int i=0; i < mImageAdapter.getCount(); i++) {
+            mDisplayImages.setItemChecked(i, true);
         }
         return;
     }
@@ -396,12 +401,12 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     }
 
     private Intent createCheckedItemsIntent() {
-        int selectCount = displayImages.getCheckedItemCount();
+        int selectCount = mDisplayImages.getCheckedItemCount();
         Log.d(TAG, "Selected Items " + selectCount);
         if (selectCount > 0) {
             Intent shareIntent = new Intent();
             shareIntent.setAction(Intent.ACTION_SEND_MULTIPLE);
-            SparseBooleanArray checkedItems = displayImages.getCheckedItemPositions();
+            SparseBooleanArray checkedItems = mDisplayImages.getCheckedItemPositions();
             if (checkedItems != null) {
                 mImageUris.clear();
                 for (int index = 0; index < checkedItems.size(); index++) {
@@ -499,7 +504,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
         public void onItemCheckedStateChanged(ActionMode mode, int position,
                 long id, boolean checked) {
-            int selectCount = displayImages.getCheckedItemCount();
+            int selectCount = mDisplayImages.getCheckedItemCount();
             String operation = (mState == SelectState.ALL) ? "selected" : "picked";
             switch (selectCount) {
             case 1:
@@ -618,7 +623,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 public void onClick(View v) {
                     // TODO Auto-generated method stub
                     //ViewHolder holder = (ViewHolder) v.getTag();
-                    SparseBooleanArray checked = displayImages.getCheckedItemPositions();
+                    SparseBooleanArray checked = mDisplayImages.getCheckedItemPositions();
                     CheckBox cb = (CheckBox) v;
                     int id = cb.getId();
                     if (checked.get(id)){
@@ -660,8 +665,8 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
      */
     private void addGridImage(Bitmap... value) {
         for (Bitmap image : value) {
-            imageAdapter.addPhoto(image);
-            imageAdapter.notifyDataSetChanged();
+            mImageAdapter.addPhoto(image);
+            mImageAdapter.notifyDataSetChanged();
         }
     }
 
@@ -813,35 +818,25 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 if (curDate == null) break;
                 long dateinMilliSec = Long.parseLong(curDate);
                 mCalendar.setTimeInMillis(dateinMilliSec);
-                int monthOfYear = mCalendar.get(Calendar.MONTH);
-                //if (monthOfYear >= 0 && monthOfYear <= 11 ) {
-                // TBD: These checks have to much much smarter.. They are way too dumb for my liking
-                Pair<Long, Long> pairRange = mAnalyzer.getDateRange(mUserFilter);
-                if (null != pairRange) {
-                    DateRangeManager range = new DateRangeManager();
-                    range.printDateAndTime(mCalendar);
-                    if ((dateinMilliSec >= pairRange.first) && (dateinMilliSec <= pairRange.second)) {
-                        if (DEBUG) Log.d(TAG, "****** Added ********* ");
-                        range.printDateAndTime(mCalendar);
-                        if (DEBUG) Log.d(TAG, "****** Added ********* ");
-                        dateRangeMatchFound= 0;
-                      added = true;//addtoListIfNotFound(path);
-                    } else {
-                        dateRangeMatchFound= 1;
-                        added = false;
-                    }
-                } else if(mUserFilter.toLowerCase().contains(mMonthNamesFilter[monthOfYear].toLowerCase())) {
-                    added = true;//addtoListIfNotFound(path);
+                if (null != mPairRange) {
+                   mRangeMgr.printDateAndTime(mCalendar);
+                   if ((dateinMilliSec >= mPairRange.first) && (dateinMilliSec <= mPairRange.second)) {
+                       if (DEBUG) Log.d(TAG, "****** Added ********* ");
+                       mRangeMgr.printDateAndTime(mCalendar);
+                       if (DEBUG) Log.d(TAG, "****** Added ********* ");
+                       dateRangeMatchFound= 0;
+                       added = true;//addtoListIfNotFound(path);
+                   } else {
+                       dateRangeMatchFound= 1;
+                       added = false;
+                   }
                 }
-
                 if (mUserFilter.toLowerCase().contains(mLastWeekEndFilter.toLowerCase())) {
-                    DateRangeManager range = new DateRangeManager();
-                    Pair<Long, Long> p = range.getLastWeekEnd();
-                    range.printDateAndTime(mCalendar);
+                    mRangeMgr.printDateAndTime(mCalendar);
 
-                    if ((dateinMilliSec >= p.first) && (dateinMilliSec <= p.second)) {
+                    if ((dateinMilliSec >= mTodayPair.first) && (dateinMilliSec <= mTodayPair.second)) {
                       if (DEBUG) Log.d(TAG, "****** Added ********* ");
-                      range.printDateAndTime(mCalendar);
+                      mRangeMgr.printDateAndTime(mCalendar);
                       if (DEBUG) Log.d(TAG, "****** Added ********* ");
                       added = true;// addtoListIfNotFound(path);
                       dateRangeMatchFound= 0;
@@ -851,15 +846,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                     }
                 }
                 if (mUserFilter.toLowerCase().contains(mTodayFilter.toLowerCase())) {
-                    // TBD: Need to Re-factor this code with the above
-                    DateRangeManager range = new DateRangeManager();
-                    Pair<Long, Long> p = range.getToday();
+                    mRangeMgr.printDateAndTime(mCalendar);
 
-                    range.printDateAndTime(mCalendar);
-
-                    if ((dateinMilliSec >= p.first) && (dateinMilliSec <= p.second)) {
+                    if ((dateinMilliSec >= mLastWeekEnd.first) && (dateinMilliSec <= mLastWeekEnd.second)) {
                         dateRangeMatchFound= 0;
-                      added = true; // traddtoListIfNotFound(path);
+                      added = true; // addtoListIfNotFound(path);
                     } else {
                         dateRangeMatchFound= 1;
                         added = false; //!removeFromList(path);
@@ -971,8 +962,12 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                        added = true;
                      }
                    } else {
-                     // City doesn't exist
-                        added = false ;
+                       // This check is important, because if pic is already added as a result of previous 'filter match'
+                       // If already added and place is not found in the User-filter, then retain it as added!
+                       if (!added) {
+                         // City doesn't exist
+                         added = false ;
+                       }
                    }
                 } else {
                     if (WARN) Log.i(TAG, "Ooops! No results");

@@ -274,18 +274,39 @@ public class UserFilterAnalyzer implements LogUtils{
     }
 
     public Pair<Long,Long> getRangeForSingleDateIfValid(Calendar range1, Calendar range2) {
+        long offset = 1;
         if ((range1.isSet(Calendar.MONTH)) && (range1.isSet(Calendar.DAY_OF_MONTH))) {
           range1.set(Calendar.YEAR,mRangeMgr.getCurrentYear());
         } else if ((range1.isSet(Calendar.MONTH)) && (range1.isSet(Calendar.YEAR))) {
            range1.set(Calendar.DAY_OF_MONTH,1);
+           offset = range1.getActualMaximum(Calendar.DAY_OF_MONTH);
         } else if ((range1.isSet(Calendar.YEAR)) && (range1.isSet(Calendar.DAY_OF_MONTH))) {
-           range1.set(Calendar.MONTH,0);
+           range1.set(Calendar.MONTH,range1.get(mRangeMgr.getCurrentMonth()));
         } else {
-           return null;
+            // ONLY month is set. Ex:- May
+            if (range1.isSet(Calendar.MONTH) && !range1.isSet(Calendar.DAY_OF_MONTH) && !range1.isSet(Calendar.YEAR)) {
+                range1.set(Calendar.YEAR,mRangeMgr.getCurrentYear());
+                range1.set(Calendar.DAY_OF_MONTH,1);
+                offset = range1.getActualMaximum(Calendar.DAY_OF_MONTH);
+            } else if (!range1.isSet(Calendar.MONTH) && !range1.isSet(Calendar.DAY_OF_MONTH) && range1.isSet(Calendar.YEAR))  {
+                // Only YEAR is set Ex:- 2013
+                int year = mRangeMgr.getCurrentYear();
+                boolean isLeapYear = ((year % 400 == 0) || ((year % 4 == 0) && (year % 100 != 0)));
+                offset = isLeapYear ? 366 : 365;
+                range1.set(Calendar.MONTH,Calendar.JANUARY);
+                range1.set(Calendar.DAY_OF_MONTH,1);
+
+            }  else if (!range1.isSet(Calendar.MONTH) && range1.isSet(Calendar.DAY_OF_MONTH) && !range1.isSet(Calendar.YEAR))  {
+                // Only DAY is set Ex:- 1st -- does not make sense.. but for completeness, lets assume something
+                   range1.set(Calendar.YEAR,mRangeMgr.getCurrentYear());
+                   range1.set(Calendar.MONTH,mRangeMgr.getCurrentMonth());
+               } else {
+                return null;
+            }
         }
         // Looks like a valid single date at this point
         long val1 = range1.getTimeInMillis();
-        long val2 = val1 + SINGLE_DAY_OFFSET_IN_MS;
+        long val2 = val1 + SINGLE_DAY_OFFSET_IN_MS * offset;
         Pair<Long, Long> p = new Pair<Long, Long>(val1,val2);
         return p;
     }
