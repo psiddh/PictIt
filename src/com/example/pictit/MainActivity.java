@@ -23,6 +23,7 @@ import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.speech.RecognizerIntent;
 import android.util.Log;
+import android.util.Pair;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -49,6 +50,7 @@ public class MainActivity extends Activity {
     private ProgressBar mProgress;
     private EditText mEditText;
     ImageButton mImgButton = null;
+    private UserFilterAnalyzer mUserFilterAnalyzer;
     //private DrawerLayout mDrawerLayout;
     //private ListView mDrawerList;
     //private ActionBarDrawerToggle mDrawerToggle;

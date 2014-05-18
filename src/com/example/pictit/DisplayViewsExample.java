@@ -6,6 +6,7 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 
+import android.app.ActionBar;
 import android.app.Activity;
 import android.app.LoaderManager.LoaderCallbacks;
 import android.content.BroadcastReceiver;
@@ -25,6 +26,9 @@ import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.provider.MediaStore;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.DisplayMetrics;
@@ -88,6 +92,17 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
     Pair<Long, Long> mLastWeekEnd = mRangeMgr.getLastWeekEnd();
 
+    String mUserFilterContainsAPlace = null;
+
+    int mMatchState = -1;
+
+    Calendar mTitleCalendar = Calendar.getInstance((Locale.getDefault()));
+
+    ActionBar mActBar = null;
+
+    boolean mUpdateSubTitleRequired = true;
+    ArrayList<String> mPlaceList = new ArrayList<String>();
+    boolean mIsTitleDate = false;
     // ************************************************************************
 
     ArrayList<Uri> mImageUris = new ArrayList<Uri>();
@@ -110,6 +125,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     }
 
     SelectState mState = SelectState.NONE;
+    private static final int SELECT_ALL_ITEMS = 1001;
     boolean mClickStateOnGridItemAShortPress = true;
 
     private UserFilterAnalyzer mAnalyzer;
@@ -126,19 +142,38 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     DisplayMetrics mOutMetrics;
     float mDensity;
 
+    private Handler mHandler = new Handler(Looper.getMainLooper()) {
+            public void handleMessage (Message msg) {
+                 switch (msg.what) {
+                  case SELECT_ALL_ITEMS:
+                    setShareIntent(createCheckedItemsIntent());
+                    break;
+                   default:
+                     break;
+                 }
+            }
+        };
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         setContentView(R.layout.displaygridview);
         getLoaderManager().initLoader(0, null, this);
+        mActBar = getActionBar();
 
         Intent intent = getIntent();
         String filter = intent.getExtras().getString("filter");
         mUserFilter = filter;
-        mAnalyzer = new UserFilterAnalyzer(filter);
+        mAnalyzer = new UserFilterAnalyzer(this, filter);
         mPairRange = mAnalyzer.getDateRange(mUserFilter);
+        String title = getTitleFromPair(mPairRange);
+        mMatchState = mAnalyzer.getMatchState();
+        updateTitle(title);
         setProgressBarIndeterminateVisibility(true);
+
+        mActBar.setHomeButtonEnabled(true);
+        mActBar.setDisplayHomeAsUpEnabled(true);
 
         mConnectivityManager =  (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
         mDbHelper = DataBaseManager.getInstance(this);
@@ -165,19 +200,81 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
         setupViews();
 
+        if (mDbHelper.getState() == DataBaseManager.SyncState.SYNC_STATE_COMPLETED)
+            mUserFilterContainsAPlace = mDbHelper.retreivePlaceFromStringIfExists(mUserFilter);
         // Register to receive messages.
         // We are registering an observer (mMessageReceiver) to receive Intents
         // with actions named "custom-event-name".
         LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver,
             new IntentFilter("custom-event-name"));
+    }
 
+    private String getTitleFromPair(Pair<Long, Long> pair) {
+        Calendar current = Calendar.getInstance((Locale.getDefault()));
+        long secondPair = 0;
+        String title = "";
+        if (pair == null)
+          return title;
+        mTitleCalendar.setTimeInMillis(pair.first);
+        title += mTitleCalendar.getDisplayName(Calendar.MONTH, Calendar.SHORT, Locale.ENGLISH);
+        title += " ";
+
+        title += mTitleCalendar.get(Calendar.DAY_OF_MONTH);
+        title += ", '";
+
+        title += mTitleCalendar.get(Calendar.YEAR) % 100;
+        title += " - ";
+
+        mTitleCalendar.clear();
+
+        if (pair.second >= current.getTimeInMillis()) {
+            secondPair = current.getTimeInMillis();
+            title += "(Today) ";
+        }
+        else {
+            secondPair = pair.second;
+        }
+        mTitleCalendar.setTimeInMillis(secondPair);
+
+        title += mTitleCalendar.getDisplayName(Calendar.MONTH, Calendar.SHORT, Locale.ENGLISH);
+        title += " ";
+
+        title += mTitleCalendar.get(Calendar.DAY_OF_MONTH);
+        title += ", '";
+
+        title += mTitleCalendar.get(Calendar.YEAR) % 100;
+        title += " ";
+        mIsTitleDate = true;
+        return title;
+    }
+
+    private void updateTitle(String title) {
+        mActBar.setTitle(title);
+    }
+
+    private void updateSubTitleAndTitleIfNecessary(String placeFound) {
+        String subTitle = "";
+        for (int index = 0; index < mPlaceList.size(); index++) {
+            if (index != 0) {
+                subTitle += ", ";
+            }
+            subTitle += mPlaceList.get(index);
+        }
+
+        if (!mIsTitleDate)
+            mActBar.setTitle(subTitle);
+        else {
+            //int index = mList.indexOf(mActBar.getTitle().toString());
+            mActBar.setSubtitle(subTitle);
+        }
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        if (!mLoadImagesInBackground.isCancelled()) {
+        if (mLoadImagesInBackground != null && !mLoadImagesInBackground.isCancelled()) {
         }
+        mHandler.removeMessages(SELECT_ALL_ITEMS);
         setShareIntent(null);
     }
 
@@ -189,7 +286,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     @Override
     public void onStop() {
         super.onStop();
-        if (!mLoadImagesInBackground.isCancelled()) {
+        if (mLoadImagesInBackground != null && !mLoadImagesInBackground.isCancelled()) {
             mLoadImagesInBackground.cancel(true);
         }
     }
@@ -368,7 +465,14 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             case R.id.menu_item_pick_all:
                 mState = SelectState.ALL;
                 selectAll();
+                Message mesg = new Message();
+                mesg.what = SELECT_ALL_ITEMS;
+                mHandler.removeMessages(SELECT_ALL_ITEMS);
+                mHandler.sendMessageDelayed(mesg, 1000);
                 return true;
+            case android.R.id.home:
+                onBackPressed();
+                break;
             /*case R.id.menu_item_search:
                 Intent intent = new Intent(getBaseContext(), WiFiDirectActivity.class);
                 intent.putStringArrayListExtra("image_paths", mList);
@@ -514,7 +618,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 mode.setSubtitle("" + selectCount + " " + operation);
                 break;
             }
-            setShareIntent(createCheckedItemsIntent());
         }
     }
 
@@ -834,7 +937,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 if (mUserFilter.toLowerCase().contains(mLastWeekEndFilter.toLowerCase())) {
                     mRangeMgr.printDateAndTime(mCalendar);
 
-                    if ((dateinMilliSec >= mTodayPair.first) && (dateinMilliSec <= mTodayPair.second)) {
+                    if ((dateinMilliSec >= mLastWeekEnd.first) && (dateinMilliSec <= mTodayPair.second)) {
                       if (DEBUG) Log.d(TAG, "****** Added ********* ");
                       mRangeMgr.printDateAndTime(mCalendar);
                       if (DEBUG) Log.d(TAG, "****** Added ********* ");
@@ -848,7 +951,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 if (mUserFilter.toLowerCase().contains(mTodayFilter.toLowerCase())) {
                     mRangeMgr.printDateAndTime(mCalendar);
 
-                    if ((dateinMilliSec >= mLastWeekEnd.first) && (dateinMilliSec <= mLastWeekEnd.second)) {
+                    if ((dateinMilliSec >= mTodayPair.first) && (dateinMilliSec <= mTodayPair.second)) {
                         dateRangeMatchFound= 0;
                       added = true; // addtoListIfNotFound(path);
                     } else {
@@ -862,8 +965,15 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                    GeoDecoder geoDecoder = null;
                    String addr = null;
                    Integer currentId = cur.getInt(id);
-                   boolean alsoMatchCity = true; //mAnalyzer.isPrepositionKeywordFoundBeforePlace(mUserFilter);
-                   //added = !alsoMatchCity;
+                   if (mDbHelper.getState() != DataBaseManager.SyncState.SYNC_STATE_COMPLETED)
+                       mUserFilterContainsAPlace = mDbHelper.retreivePlaceFromStringIfExists(mUserFilter);
+                   boolean alsoMatchCity = false;
+                   if (mUserFilterContainsAPlace != null) {
+                       alsoMatchCity = (UserFilterAnalyzer.MATCH_STATE_DATES_AND_PLACE_EXACT == mAnalyzer.getMatchState());
+                       if (added && alsoMatchCity) {
+                           added = false;
+                       }
+                   }
                    List<Address> address;
                    ExifInterface intf = null;
                    try {
@@ -883,13 +993,43 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                      && (attrLONGITUDE_REF !=null)){
                        // It has some valid values
                        // Try to read from Cache / db
-                       String placeFound = mDbHelper.getPlace(currentId);
+                       final String placeFound = mDbHelper.getPlace(currentId);
                        if (placeFound == null) {
                            // Place not found in cache or db ,but it has a valid GPS cod-ordinates
                            // Try and fallback on GeoCoder API to retrieve the place.
                        } else if(mUserFilter.toLowerCase().contains(placeFound.toLowerCase())) {
                            // Wow... we have the place found either in the cache or db..
-                           added = true;
+                           int index = mPlaceList.indexOf(placeFound.toUpperCase());
+                           if (index == -1) {
+                               mPlaceList.add(placeFound.toUpperCase());
+                               mUpdateSubTitleRequired = true;
+                           }
+                           alsoMatchCity = (UserFilterAnalyzer.MATCH_STATE_DATES_AND_PLACE_EXACT == mAnalyzer.getMatchState());
+                           if (dateRangeMatchFound != -1) {
+                               // DateRange has been set
+                               if ((dateRangeMatchFound == 0) && (alsoMatchCity)) {
+                                   // Date Range Match found and Match city
+                                   added = true;
+                               } else if ((dateRangeMatchFound == 1) && (alsoMatchCity)) {
+                                   // date range Match is false , and match city
+                                   added = false;
+                               } else {
+                                   // Match city flag is false, but city matches anyways
+                                   added = true;
+                               }
+                           } else {
+                             // Date Range not set but Locality match succeed.
+                             added = true;
+                           }
+                           if (mUpdateSubTitleRequired) {
+                               runOnUiThread(new Runnable() {
+                                   @Override
+                                   public void run() {
+                                       updateSubTitleAndTitleIfNecessary(placeFound);
+                                       mUpdateSubTitleRequired = false;
+                                   }
+                               });
+                           }
                            break;
                        } else {
                            // OK some place exists in cache / db but does not match with UserFilter
@@ -939,6 +1079,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                        mDbHelper.updateRow(currentId, locality);
                    }
                    if ((locality != null) && (0 == mAnalyzer.compareUserFilterForCity(locality))) {
+                       alsoMatchCity = (UserFilterAnalyzer.MATCH_STATE_DATES_AND_PLACE_EXACT == mAnalyzer.getMatchState());
                      // At this point, 'locality' / 'city' is matched.
                      // check 'dateRangeMatchFound' has been set or not
 

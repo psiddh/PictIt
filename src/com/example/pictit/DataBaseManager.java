@@ -25,6 +25,8 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
   public static final String COLUMN_ID = "_id";
   public static final String PICTURE_ID = "pict_id";
   public static final String PICTURE_PLACE = "place";
+  public static final String PICTURE_COUNTRY = "country";
+  public static final String PICTURE_ADMIN = "admin";
   public static final String PICTURE_LAT = "lat";
   public static final String PICTURE_LONG = "longi";
 
@@ -45,7 +47,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
 
   ConnectivityManager mConnectivityManager;
 
-  private enum SyncState {
+  public enum SyncState {
        SYNC_STATE_UNKNOWN,
        SYNC_STATE_INITIATED,
        SYNC_STATE_INPROGRESS,
@@ -55,7 +57,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
        SYNC_STATE_INCOMPLETE,
     }
 
-  SyncState state;
+  public static SyncState state;
 
   // Database creation sql statement
   private static final String DATABASE_CREATE = "create table if not exists "
@@ -63,12 +65,16 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
       + COLUMN_ID + " integer primary key autoincrement, "
       + PICTURE_ID  + " integer,"
       + PICTURE_PLACE + " text,"
+      + PICTURE_COUNTRY + " text,"
+      + PICTURE_ADMIN + " text,"
       + PICTURE_LAT   + " text,"
       + PICTURE_LONG  + " text);";
 
     private static final String ROW_PICT_ID_EXISTS = "Select * from " + TABLE_GALLERY + " where " + PICTURE_ID + "=";
 
     private static final String COUNT_ROWS = "select * from " + TABLE_GALLERY;
+
+    private static final String GET_PLACES_UNIQUE = "select DISTINCT" + PICTURE_PLACE + " from " + TABLE_GALLERY;
 
     /**
      * constructor should be private to prevent direct instantiation.
@@ -112,7 +118,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
            if (DEBUG) Log.d(TAG,"yyyyyyyyyyyyyyyyyy - DB Closed");
        }
     }
-      private void insertRow(int id, int pict_id, String place, String lat, String longi) {
+      private void insertRow(int id, int pict_id, String place, String country, String admin, String lat, String longi) {
           ContentValues values = new ContentValues();
           values.put(PICTURE_ID,pict_id);
           values.put(PICTURE_PLACE, place);
@@ -141,17 +147,18 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
       }
 
       private String getPictureFromDB(int pict_id) {
-           String data = null;
+           String place = null;
            Cursor cursor = mDataBase.rawQuery(ROW_PICT_ID_EXISTS + pict_id, null);
            if(!(cursor.getCount()<=0)){
               //if (DEBUG) Log.d(TAG, "xxxxxxxxxxxxx Count = " + cursor.getCount());
               cursor.moveToFirst();
               int index = cursor.getColumnIndex(PICTURE_PLACE);
-              if (index != -1)
-                data = cursor.getString(index);
+              if (index != -1) {
+                  place = cursor.getString(index);
+              }
            }
            cursor.close();
-           return data;
+           return place;
       }
 
       private int countRowsinDB() {
@@ -164,7 +171,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
       private void performSync(Cursor cur) {
       opendb();
       if (null == mConnectivityManager)
-        mConnectivityManager =  (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+          mConnectivityManager =  (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
           do {
               state = SyncState.SYNC_STATE_INPROGRESS;
               if (cur.isClosed()) break;
@@ -192,6 +199,8 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
               }
               List<Address> address;
               String place = null;
+              String country = null;
+              String adminArea = null;
               GeoDecoder geoDecoder = null;
               try {
                       geoDecoder = new GeoDecoder(new ExifInterface(path));
@@ -203,15 +212,17 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
                       if ((address!= null && address.size() > 0) && (address.get(0) != null)) {
                         // Fetched successfully from Internet
                         place = address.get(0).getLocality();
+                        country = address.get(0).getCountryName();
+                        adminArea = address.get(0).getAdminArea();
                       } else
-                        continue;
+                          continue;
                       // Update the DB with pictureID and the place..but again check if it is really
                       // present in db again. This check 'getPictureFromDB' earlier should have sufficed.
                       // It doesn't hurt to absolutely check against 'pict_id' & 'place' in the db. If not
                       // found, insert the row in the database and of-course update the cache.
                       if (!checkIfPictureExists(id, place) )
-                        insertRow(-1, id, place, null, null);
-                      mMapCache.put(id, place);
+                        insertRow(-1, id, place, country, adminArea, null, null);
+                      mMapCache.put(id, placeFound);
               } catch (IOException e) {
                       // TODO Auto-generated catch block
                       e.printStackTrace();
@@ -307,7 +318,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
           mMapCache.put(id, place);
           opendb();
           if (!checkIfPictureExists(id, place))
-              insertRow(-1, id, place, null, null);
+              insertRow(-1, id, place, null, null, null, null);
           closedb();
       }
 
@@ -329,5 +340,32 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
 
       public void setState(SyncState state) {
           this.state = state;
+      }
+
+      public String retreivePlaceFromStringIfExists(String userFilter) {
+          String placeFound = null;
+          for (String place : mMapCache.values()) {
+              if(userFilter.toLowerCase().contains(place.toLowerCase())) {
+              placeFound = place;
+              if (DEBUG) Log.d(TAG,  " xxxx placeFound in the UserString -  " + placeFound);
+                  break;
+              }
+          }
+     /* if (placeFound == null) {
+      // Try and get from d/b
+      String data = null;
+             boolean ret = false;
+              Cursor cursor = mDataBase.rawQuery(GET_PLACES_UNIQUE , null);
+              if(!(cursor.getCount()<=0)){
+                 cursor.moveToFirst();
+                 int index = cursor.getColumnIndex(PICTURE_PLACE);
+                 if (index != -1)
+                   data = cursor.getString(index);
+                 ret = ((data != null) && data.equalsIgnoreCase(place));
+              }
+              cursor.close();
+              return ret;
+      } */
+          return placeFound;
       }
 }
