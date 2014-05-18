@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import android.content.Context;
 import android.util.Log;
 import android.util.Pair;
 
@@ -21,14 +22,15 @@ public class UserFilterAnalyzer implements LogUtils{
 
     private String TAG = "pickit/UserFilterAnalyzer";
 
-    private int    MATCH_SUCCESS  = 0;
-    private int    MATCH_FAILURE  = 1;
-
     private int   SINGLE_DAY_OFFSET_IN_MS = 86400000;
 
-    private String userFilter = null;
+    private String mUserFilter = null;
 
     private String[] mWords ;
+
+    private Context mContext;
+
+    DataBaseManager mDbHelper;
 
     DateRangeManager mRangeMgr = new DateRangeManager();
 
@@ -43,6 +45,26 @@ public class UserFilterAnalyzer implements LogUtils{
     private static final int KEYWORD_SPECIAL = 7;
     private static final int KEYWORD_PHRASES_OTHER = 8;
     private static final int KEYWORD_UNKNOWN = 0xFF;
+
+    private int mDateStartIndex = -1;
+    private int mDateEndIndex = -1;
+
+    private int mPhraseIndex = -1;
+    private int mPlaceIndex = -1;
+
+    private int mMatchState = -1;
+    private boolean mMatchStateUpdateNeededForPlace = true;
+    private boolean mIsDateAPharse = false;
+
+    private int    MATCH_SUCCESS  = 0;
+    private int    MATCH_FAILURE  = 1;
+
+    public static final int MATCH_STATE_NONE = 1000;
+    public static final int MATCH_STATE_ONLY_DATES = 1001;
+    public static final int MATCH_STATE_ONLY_PLACE = 1002;
+    public static final int MATCH_STATE_DATES_AND_PLACE = 1003;
+    public static final int MATCH_STATE_DATES_AND_PLACE_EXACT = 1004;
+
 
     private void initKeyWords() {
         // Month key words
@@ -179,34 +201,53 @@ public class UserFilterAnalyzer implements LogUtils{
         mDateRangeKeyWord.put("beginning of the world",new Integer[] {KEYWORD_PHRASES_OTHER, -1});
     }
 
-    public UserFilterAnalyzer(String filter) {
-        userFilter = filter;
+    public UserFilterAnalyzer(Context context, String filter) {
+    mUserFilter = filter;
 
-        mWords = userFilter.split("\\s+");
+        mWords = mUserFilter.split("\\s+");
         if (DEBUG) {
             for (int i = 0; i < mWords.length; i++) {
               Log.d(TAG, "Word "+ i+1 + " :" + mWords[i]);
             }
         }
         initKeyWords();
+
+    mContext = context;
+    mDbHelper = DataBaseManager.getInstance(mContext);
     }
 
-    public boolean isPrepositionKeywordFoundBeforePlace(String compareString) {
-    int placeIndex = -1;
+    public boolean isPrepositionKeywordFoundBeforeFilter(String compareString, boolean place) {
+    int index = -1;
     int retry = 0;
     int currentIndex = 0;
     boolean foundPreposition = false;
+
+    if (compareString == null) return false;
+    String concat = "";
     for (int i = 0; i < mWords.length; i++) {
-        if ((0 == (mWords[i].compareToIgnoreCase("Place"))) ||
-            (0 == (mWords[i].compareToIgnoreCase("Places")))) {
-            placeIndex = i;
-            break;
+      concat += mWords[i] + " ";
+      for (int j = i+1; j < mWords.length; j++) {
+        concat += mWords[j] + " ";
+        if(concat.toLowerCase().contains(compareString.toLowerCase())) {
+          index = j;
+          break;
         }
+        if (j+1 == mWords.length) {
+            concat = "";
+        }
+      }
+      if(index != -1) {
+          break;
+      }
     }
 
-    if (-1 == placeIndex) return foundPreposition;
-    currentIndex = placeIndex;
-    // Now we have placeIndex
+    if (-1 == index) return foundPreposition;
+    currentIndex = index;
+
+    if(place)
+      mPlaceIndex = index;
+
+    // Now we have index
     do {
         if ((currentIndex - 1) >= 0) {
             if (isFillerWord(mWords[currentIndex - 1])) {
@@ -222,7 +263,7 @@ public class UserFilterAnalyzer implements LogUtils{
             retry++;
             continue;
         }
-    } while (currentIndex > 0 && retry < 2 && currentIndex < mWords.length);  // value 2 for fault tolerance.. yeah I know
+    } while (currentIndex > 0 && retry < 6 && currentIndex < mWords.length);  // value 3 for fault tolerance.. yeah I know
 
         if (DEBUG && (currentIndex - 1) >= 0 )
             Log.d(TAG, "Found preposition at index " + (currentIndex - 1) + " Word : "  + mWords[currentIndex - 1]);
@@ -306,7 +347,7 @@ public class UserFilterAnalyzer implements LogUtils{
         }
         // Looks like a valid single date at this point
         long val1 = range1.getTimeInMillis();
-        long val2 = val1 + SINGLE_DAY_OFFSET_IN_MS * offset;
+        long val2 = val1 + SINGLE_DAY_OFFSET_IN_MS * (offset - 1);
         Pair<Long, Long> p = new Pair<Long, Long>(val1,val2);
         return p;
     }
@@ -328,21 +369,30 @@ public class UserFilterAnalyzer implements LogUtils{
             }
             switch (keyword_Val[0]) {
               case KEYWORD_YEAR :
-                  if (!range1.isSet(Calendar.YEAR) && !isCalendarObjSet(range2))
+                  if (mDateStartIndex == -1)
+                      mDateStartIndex = index;
+                  mDateEndIndex = index;
+                  if (!range1.isSet(Calendar.YEAR) && !isCalendarObjSet(range2) && (!(validRange[1] == 1 || validRange[2] == 1)))
                     range1.set(Calendar.YEAR,keyword_Val[1]);
                   else
                     range2.set(Calendar.YEAR,keyword_Val[1]);
                   validRange[0]++;
                   break;
               case KEYWORD_MONTH_NAME :
-                  if (!range1.isSet(Calendar.MONTH))
+                  if (mDateStartIndex == -1)
+                      mDateStartIndex = index;
+                  mDateEndIndex = index;
+                  if (!range1.isSet(Calendar.MONTH) && (!(validRange[0] == 1 || validRange[2] == 1)))
                       range1.set(Calendar.MONTH,keyword_Val[1]);
                   else
                     range2.set(Calendar.MONTH,keyword_Val[1]);
                   validRange[1]++;
                   break;
               case KEYWORD_MONTH_DAYS :
-                  if (!range1.isSet(Calendar.DAY_OF_MONTH))
+                  if (mDateStartIndex == -1)
+                      mDateStartIndex = index;
+                  mDateEndIndex = index;
+                  if (!range1.isSet(Calendar.DAY_OF_MONTH) && (!(validRange[0] == 1 || validRange[1] == 1)))
                       range1.set(Calendar.DAY_OF_MONTH,keyword_Val[1]);
                   else
                     range2.set(Calendar.DAY_OF_MONTH,keyword_Val[1]);
@@ -489,5 +539,40 @@ public class UserFilterAnalyzer implements LogUtils{
     public String toString() {
       // TODO Auto-generated method stub
       return null;
+    }
+
+    public String getStartDate() {
+        if ((mDateStartIndex == -1) || (mDateStartIndex >= mWords.length))
+            return null;
+        return mWords[mDateStartIndex];
+    }
+
+    public int getMatchState() {
+        int mMatchState = MATCH_STATE_NONE;
+        Pair<Long, Long> mPairRange = getDateRange(mUserFilter);
+        String place = mDbHelper.retreivePlaceFromStringIfExists(mUserFilter);
+        boolean alsoMatchCity = false;
+        boolean alsoMatchDate = false;
+        if (place != null) {
+            alsoMatchCity = isPrepositionKeywordFoundBeforeFilter(place, true);
+        }
+        alsoMatchDate = isPrepositionKeywordFoundBeforeFilter(getStartDate(), false);
+
+        if ((mPairRange != null) && (place != null)) {
+        if (alsoMatchCity || alsoMatchDate) {
+             mMatchState = MATCH_STATE_DATES_AND_PLACE_EXACT;
+        } else {
+            mMatchState = MATCH_STATE_DATES_AND_PLACE;
+        }
+        } else if (mPairRange != null) {
+            // place is null here
+            mMatchState = MATCH_STATE_ONLY_DATES;
+        } else if (place != null) {
+            mMatchState = MATCH_STATE_ONLY_PLACE;
+        } else {
+            // maintain status-quo
+        }
+
+        return mMatchState;
     }
 }
