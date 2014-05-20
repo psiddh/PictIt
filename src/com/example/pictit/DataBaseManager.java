@@ -55,7 +55,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
        SYNC_STATE_UPDATE,
        SYNC_STATE_ABORTED,
        SYNC_STATE_INCOMPLETE,
-    }
+  }
 
   public static SyncState state;
 
@@ -122,6 +122,8 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
           ContentValues values = new ContentValues();
           values.put(PICTURE_ID,pict_id);
           values.put(PICTURE_PLACE, place);
+          values.put(PICTURE_COUNTRY, country);
+          values.put(PICTURE_ADMIN, admin);
           values.put(PICTURE_LAT, lat);
           values.put(PICTURE_LONG, longi);
           long val = mDataBase.insert(TABLE_GALLERY, null, values);
@@ -234,7 +236,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
           if (TEST_DB_INITIAL_CREATION_AND_CACHE_UPDATE_FOR_PLACE) {
           int count =0;
           for(String value: mMapCache.values()) {
-              if (value.equals("San Francisco")) {
+              if ((value != null) && value.equals("San Francisco")) {
                 count++;
               }
             }
@@ -310,7 +312,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
           return placeFound.equalsIgnoreCase(place);
       }
 
-      public void updateRow(int id, String place) {
+      public void updateRow(int id, String place, String country, String admin) {
           String placeFound = mMapCache.get(id);
           if (null != placeFound) {
               return;
@@ -318,7 +320,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
           mMapCache.put(id, place);
           opendb();
           if (!checkIfPictureExists(id, place))
-              insertRow(-1, id, place, null, null, null, null);
+              insertRow(-1, id, place, country, admin, null, null);
           closedb();
       }
 

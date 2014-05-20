@@ -57,8 +57,7 @@ import android.widget.ImageView;
 import android.widget.ShareActionProvider;
 import android.widget.Toast;
 import android.widget.AdapterView.OnItemClickListener;
-public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cursor>, LogUtils
-{
+public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cursor>, LogUtils {
     private String TAG = "Pickit/DisplayView";
     // CPU & connectivity data intensive operation guarded by this flag
     private boolean mSupportGeoCoder = true;
@@ -84,9 +83,9 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
     String mUserFilter;
 
-    Pair<Long, Long> mPairRange = null;
-
     DateRangeManager mRangeMgr = new DateRangeManager();
+
+    Pair<Long, Long> mPairRange = null;
 
     Pair<Long, Long> mTodayPair = mRangeMgr.getToday();
 
@@ -106,7 +105,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     // ************************************************************************
 
     ArrayList<Uri> mImageUris = new ArrayList<Uri>();
-    //Map<String, String> mMap = new HashMap<String, String>();
     ArrayList<String> mList = new ArrayList<String>();
 
     /**
@@ -152,7 +150,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                      break;
                  }
             }
-        };
+     };
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -215,17 +213,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         String title = "";
         if (pair == null)
           return title;
-        mTitleCalendar.setTimeInMillis(pair.first);
-        title += mTitleCalendar.getDisplayName(Calendar.MONTH, Calendar.SHORT, Locale.ENGLISH);
-        title += " ";
-
-        title += mTitleCalendar.get(Calendar.DAY_OF_MONTH);
-        title += ", '";
-
-        title += mTitleCalendar.get(Calendar.YEAR) % 100;
-        title += " - ";
-
-        mTitleCalendar.clear();
 
         if (pair.second >= current.getTimeInMillis()) {
             secondPair = current.getTimeInMillis();
@@ -235,7 +222,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             secondPair = pair.second;
         }
         mTitleCalendar.setTimeInMillis(secondPair);
-
         title += mTitleCalendar.getDisplayName(Calendar.MONTH, Calendar.SHORT, Locale.ENGLISH);
         title += " ";
 
@@ -243,7 +229,17 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         title += ", '";
 
         title += mTitleCalendar.get(Calendar.YEAR) % 100;
+        title += " - ";
+        mTitleCalendar.clear();
+        mTitleCalendar.setTimeInMillis(pair.first);
+        title += mTitleCalendar.getDisplayName(Calendar.MONTH, Calendar.SHORT, Locale.ENGLISH);
         title += " ";
+
+        title += mTitleCalendar.get(Calendar.DAY_OF_MONTH);
+        title += ", '";
+
+        title += mTitleCalendar.get(Calendar.YEAR) % 100;
+
         mIsTitleDate = true;
         return title;
     }
@@ -317,23 +313,20 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         mDisplayImages = (GridView) findViewById(R.id.gridview);
         DisplayMetrics metrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(metrics);
+        mDisplayImages.setBackgroundColor(Color.DKGRAY);
+        mDisplayImages.setChoiceMode(mDisplayImages.CHOICE_MODE_MULTIPLE_MODAL);
+        mDisplayImages.setMultiChoiceModeListener(new MultiChoiceModeListener());
+        mDisplayImages.setDrawSelectorOnTop(true);
 
         //mDisplayImages.setNumColumns(metrics.widthPixels/200);
         //mDisplayImages.setNumColumns(3);
         //mDisplayImages.setClipToPadding(false);
-        mDisplayImages.setBackgroundColor(Color.DKGRAY);
-        mDisplayImages.setChoiceMode(mDisplayImages.CHOICE_MODE_MULTIPLE_MODAL);
-        mDisplayImages.setMultiChoiceModeListener(new MultiChoiceModeListener());
         // Make GridView use your custom selector drawable
         //mDisplayImages.setSelector(getResources().getDrawable(R.drawable.selector_grid));
-        mDisplayImages.setDrawSelectorOnTop(true);
-
-
         //mDisplayImages.setVerticalSpacing(1);
         //mDisplayImages.setHorizontalSpacing(1);
         //mDisplayImages.setOnItemClickListener(DisplayViewsExample.this);
-        mDisplayImages.setOnItemClickListener(new OnItemClickListener()
-        {
+        mDisplayImages.setOnItemClickListener(new OnItemClickListener() {
             public void onItemClick(AdapterView parent,
             View v, int position, long id)
             {
@@ -429,23 +422,17 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     }
 
     void setupCursor(Cursor cur) {
-        if (cur.moveToFirst()) {
-
+        if (cur.moveToLast()) {
             id = cur.getColumnIndex(
                     MediaStore.Images.Media._ID);
-
             bucketColumn = cur.getColumnIndex(
                 MediaStore.Images.Media.BUCKET_DISPLAY_NAME);
-
             dateColumn = cur.getColumnIndex(
                 MediaStore.Images.Media.DATE_TAKEN);
-
             titleColumn = cur.getColumnIndex(
                     MediaStore.Images.Media.TITLE);
-
             dataColumn = cur.getColumnIndex(
                     MediaStore.Images.Media.DATA);
-
             Log.d(TAG, cur.getPosition() + " : " + dateColumn );
         }
     }
@@ -665,18 +652,9 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 imageView = new ImageView(mContext);
                 l.addView(imageView);
             } else {
-                //imageView = (ImageView) convertView;
                 l = (CheckableLayout) convertView;
                 imageView = (ImageView) l.getChildAt(0);
             }
-
-            int width1 = (int)mContext.getResources().getDimension(R.dimen.width);
-            int height1 = (int)mContext.getResources().getDimension(R.dimen.height);
-            if (position %2 == 0) {
-                //width = 200;
-                //height = 200;
-            }
-            //imageView.setLayoutParams(new GridView.LayoutParams(width,height));
             imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
             int orientation = getResources().getConfiguration().orientation;
             int left =4,top = 4,right =4,bottom = 4;
@@ -685,9 +663,9 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             } else {
                top = bottom = 4;
             }
-            imageView.setPadding(left,top,right,bottom);
+            //imageView.setPadding(left,top,right,bottom);
             imageView.setImageBitmap(photos.get(position));
-            //imageView.setPadding(4, 4, 4, 4);
+            imageView.setPadding(4, 4, 4, 4);
             /*WindowManager wm = (WindowManager) mContext.getSystemService(Context.WINDOW_SERVICE);
 
             Display display = wm.getDefaultDisplay();
@@ -814,7 +792,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
            // when task is cancelled. The thread that just got cancelled (as a result of configuration changes)
            // still latches onto old cursor object
 
-            while (!mCursor.isClosed() && mCursor.moveToNext() && !isCancelled()) {
+            while (!mCursor.isClosed() && mCursor.moveToPrevious() && !isCancelled()) {
                 Bitmap bmp = getImgBasedOnUserFilter(mCursor);
                 if (bmp != null) {
                   publishProgress(bmp);
@@ -867,27 +845,31 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             if(intf == null) {
                 return null;
             }
-
-            String dateString = intf.getAttribute(ExifInterface.TAG_DATETIME);
-            if (DEBUG && (null != dateString)) Log.d(TAG, dateString);
+            //mDisplay.getMetrics(mOutMetrics);
             float dpHeight = mOutMetrics.heightPixels / mDensity;
             float dpWidth  = mOutMetrics.widthPixels / mDensity;
-
             int width=(int) (dpWidth);
             int height=(int) (dpHeight);
-            if (intf.hasThumbnail()) {
+            //String dateString = intf.getAttribute(ExifInterface.TAG_DATETIME);
+            //if (DEBUG && (null != dateString)) Log.d(TAG, dateString);
+            if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE ) {
+                mDisplayImages.setNumColumns(3);
+                width = height;
+            } else {
+                mDisplayImages.setNumColumns(2);
+            }
+
+            if (intf.hasThumbnail() ) {
                byte[] thumbnail = intf.getThumbnail();
                //LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
                bitmap = BitmapFactory.decodeByteArray(thumbnail, 0, thumbnail.length);
                if (bitmap != null) {
-
                    newBitmap = Bitmap.createScaledBitmap(bitmap, width, width, true);
                    bitmap.recycle();
                    if (newBitmap != null) {
                        return newBitmap;
                    }
                }
-               //BitmapDrawable bmd = new m (getResources(),bmpImg);
                return bitmap;
             } else {
                Uri imageUri = null;
@@ -961,7 +943,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 }
                 // Following block to 'enable / disable search by places'
                 // TBD All of the parse logic should eventually be wrapped into UserFileterAnalyzer
-                if ((mSupportGeoCoder)) { // && (mUserFilter.toLowerCase().contains(mPlaceFilter.toLowerCase()))) {
+                if (mSupportGeoCoder) { // && (mUserFilter.toLowerCase().contains(mPlaceFilter.toLowerCase()))) {
                    GeoDecoder geoDecoder = null;
                    String addr = null;
                    Integer currentId = cur.getInt(id);
@@ -1072,11 +1054,16 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                    }
                    address = geoDecoder.getAddress(mContext);
                    String locality = null;
-                   if (address!= null && address.size() > 0)
+                   String country = null;
+                   String adminArea = null;
+                   if (address!= null && address.size() > 0) {
                      locality = address.get(0).getLocality();
+                     country = address.get(0).getCountryName();
+                     adminArea = address.get(0).getAdminArea();
+                   }
                    if (locality != null) {
                        // Try and insert to the d/b and cache
-                       mDbHelper.updateRow(currentId, locality);
+                       mDbHelper.updateRow(currentId, locality, country, adminArea);
                    }
                    if ((locality != null) && (0 == mAnalyzer.compareUserFilterForCity(locality))) {
                        alsoMatchCity = (UserFilterAnalyzer.MATCH_STATE_DATES_AND_PLACE_EXACT == mAnalyzer.getMatchState());
