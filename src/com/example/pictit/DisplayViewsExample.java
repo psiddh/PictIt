@@ -93,15 +93,22 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
     String mUserFilterContainsAPlace = null;
 
+    ArrayList<String> mUserFilterContainsAPLACES = null;
+
     int mMatchState = -1;
 
     Calendar mTitleCalendar = Calendar.getInstance((Locale.getDefault()));
 
     ActionBar mActBar = null;
 
-    boolean mUpdateSubTitleRequired = true;
+    int mUpdateSubTitleRequired = 0;
     ArrayList<String> mPlaceList = new ArrayList<String>();
     boolean mIsTitleDate = false;
+
+    public static final int IsPlace = 1 << 0;
+    public static final int IsCountry = 1 << 1;
+    public static final int IsAdminArea = 1 << 2;
+    public static final int IsOther = 1 << 3;
     // ************************************************************************
 
     ArrayList<Uri> mImageUris = new ArrayList<Uri>();
@@ -198,8 +205,10 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
         setupViews();
 
-        if (mDbHelper.getState() == DataBaseManager.SyncState.SYNC_STATE_COMPLETED)
+        if (mDbHelper.getState() == DataBaseManager.SyncState.SYNC_STATE_COMPLETED) {
             mUserFilterContainsAPlace = mDbHelper.retreivePlaceFromStringIfExists(mUserFilter);
+            mUserFilterContainsAPLACES = mDbHelper.retreiveAllPlacesFromStringIfExists(mUserFilter);
+        }
         // Register to receive messages.
         // We are registering an observer (mMessageReceiver) to receive Intents
         // with actions named "custom-event-name".
@@ -947,10 +956,12 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                    GeoDecoder geoDecoder = null;
                    String addr = null;
                    Integer currentId = cur.getInt(id);
-                   if (mDbHelper.getState() != DataBaseManager.SyncState.SYNC_STATE_COMPLETED)
+                   if (mDbHelper.getState() != DataBaseManager.SyncState.SYNC_STATE_COMPLETED) {
                        mUserFilterContainsAPlace = mDbHelper.retreivePlaceFromStringIfExists(mUserFilter);
+                       mUserFilterContainsAPLACES = mDbHelper.retreiveAllPlacesFromStringIfExists(mUserFilter);
+                   }
                    boolean alsoMatchCity = false;
-                   if (mUserFilterContainsAPlace != null) {
+                   if (mUserFilterContainsAPLACES != null && mUserFilterContainsAPLACES.size() > 0) {
                        alsoMatchCity = (UserFilterAnalyzer.MATCH_STATE_DATES_AND_PLACE_EXACT == mAnalyzer.getMatchState());
                        if (added && alsoMatchCity) {
                            added = false;
@@ -975,16 +986,40 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                      && (attrLONGITUDE_REF !=null)){
                        // It has some valid values
                        // Try to read from Cache / db
-                       final String placeFound = mDbHelper.getPlace(currentId);
+                       final ArrayList<String> placeList = mDbHelper.getPlace(currentId);
+                       if (placeList == null || placeList.size() == 0) {
+                       break;
+                       }
+                       final String placeFound  = placeList.get(0);
+                       if (placeList != null && placeList.size() < 2) {
+                       break;
+                       }
+                       final String countryFound  = placeList.get(1);
+                       if (placeList != null && placeList.size() < 3) {
+                       break;
+                       }
+                       final String adminAreaFound  = placeList.get(2);
                        if (placeFound == null) {
                            // Place not found in cache or db ,but it has a valid GPS cod-ordinates
                            // Try and fallback on GeoCoder API to retrieve the place.
-                       } else if(mUserFilter.toLowerCase().contains(placeFound.toLowerCase())) {
+                       } else if((mUserFilter.toLowerCase().contains(placeFound.toLowerCase()) ||
+                         (mUserFilter.toLowerCase().contains(countryFound.toLowerCase())) ||
+                         (mUserFilter.toLowerCase().contains(adminAreaFound.toLowerCase())))) {
                            // Wow... we have the place found either in the cache or db..
                            int index = mPlaceList.indexOf(placeFound.toUpperCase());
-                           if (index == -1) {
+                           if (index == -1 && mUserFilter.toLowerCase().contains(placeFound.toLowerCase())) {
                                mPlaceList.add(placeFound.toUpperCase());
-                               mUpdateSubTitleRequired = true;
+                               mUpdateSubTitleRequired |= IsPlace;
+                           }
+                           index = mPlaceList.indexOf(countryFound.toUpperCase());
+                           if (index == -1 && mUserFilter.toLowerCase().contains(countryFound.toLowerCase())) {
+                               mPlaceList.add(countryFound.toUpperCase());
+                               mUpdateSubTitleRequired |= IsCountry;
+                           }
+                           index = mPlaceList.indexOf(adminAreaFound.toUpperCase());
+                           if (index == -1 && mUserFilter.toLowerCase().contains(adminAreaFound.toLowerCase())) {
+                               mPlaceList.add(adminAreaFound.toUpperCase());
+                               mUpdateSubTitleRequired |= IsAdminArea;
                            }
                            alsoMatchCity = (UserFilterAnalyzer.MATCH_STATE_DATES_AND_PLACE_EXACT == mAnalyzer.getMatchState());
                            if (dateRangeMatchFound != -1) {
@@ -1003,12 +1038,12 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                              // Date Range not set but Locality match succeed.
                              added = true;
                            }
-                           if (mUpdateSubTitleRequired) {
+                           if (mUpdateSubTitleRequired != 0) {
                                runOnUiThread(new Runnable() {
                                    @Override
                                    public void run() {
                                        updateSubTitleAndTitleIfNecessary(placeFound);
-                                       mUpdateSubTitleRequired = false;
+                                       mUpdateSubTitleRequired = 0;
                                    }
                                });
                            }

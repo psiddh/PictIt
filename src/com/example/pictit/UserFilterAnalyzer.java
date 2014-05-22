@@ -550,20 +550,46 @@ public class UserFilterAnalyzer implements LogUtils{
     public int getMatchState() {
         int mMatchState = MATCH_STATE_NONE;
         Pair<Long, Long> mPairRange = getDateRange(mUserFilter);
-        String place = mDbHelper.retreivePlaceFromStringIfExists(mUserFilter);
+        //String place = mDbHelper.retreivePlaceFromStringIfExists(mUserFilter);
+        ArrayList<String> places = mDbHelper.retreiveAllPlacesFromStringIfExists(mUserFilter);
+        String place = "";
+        String country = "";
+        String admin = "";
         boolean alsoMatchCity = false;
         boolean alsoMatchDate = false;
-        if (place != null) {
-            alsoMatchCity = isPrepositionKeywordFoundBeforeFilter(place, true);
+
+        if (places != null && places.size() > 0 ) {
+            if (places.size() > 0) {
+                place = places.get(0);
+              }
+                if (places.size() > 1) {
+                    country = places.get(1);
+                }
+                if (places.size() > 2) {
+                    admin = places.get(2);
+                }
+
+            if (place != null) {
+                alsoMatchCity |= isPrepositionKeywordFoundBeforeFilter(place, true);
+            }
+            if (country != null) {
+                alsoMatchCity |= isPrepositionKeywordFoundBeforeFilter(country, true);
+            }
+            if (admin != null)  {
+                alsoMatchCity |= isPrepositionKeywordFoundBeforeFilter(admin, true);
+            }
         }
+        //if (place != null) {
+            //alsoMatchCity = isPrepositionKeywordFoundBeforeFilter(place, true);
+        //}
         alsoMatchDate = isPrepositionKeywordFoundBeforeFilter(getStartDate(), false);
 
         if ((mPairRange != null) && (place != null)) {
-        if (alsoMatchCity || alsoMatchDate) {
-             mMatchState = MATCH_STATE_DATES_AND_PLACE_EXACT;
-        } else {
-            mMatchState = MATCH_STATE_DATES_AND_PLACE;
-        }
+            if (alsoMatchCity || alsoMatchDate) {
+                 mMatchState = MATCH_STATE_DATES_AND_PLACE_EXACT;
+            } else {
+                mMatchState = MATCH_STATE_DATES_AND_PLACE;
+            }
         } else if (mPairRange != null) {
             // place is null here
             mMatchState = MATCH_STATE_ONLY_DATES;

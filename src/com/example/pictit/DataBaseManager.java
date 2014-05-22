@@ -2,9 +2,14 @@ package com.example.pictit;
 
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -36,14 +41,17 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
   private SQLiteDatabase mDataBase;
 
   private static DataBaseManager mInstance = null;
-
-  static Map<Integer, String> mMapCache = new HashMap<Integer, String>();
+  static ConcurrentHashMap<Integer, ArrayList<String>> mMapCache = new ConcurrentHashMap<Integer, ArrayList<String>>();
 
   private int mId = -1;
   private int mBucketColumn = 0;
   private int mDateColumn = 0;
   private int mTitleColumn = 0;
   private int mDataColumn = 0;
+
+  private int INDEX_PLACE = 0;
+  private int INDEX_COUNTRY = 1;
+  private int INDEX_ADMIN = 2;
 
   ConnectivityManager mConnectivityManager;
 
@@ -130,7 +138,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
           if (-1 == val)
               Log.d(TAG, "Failed to Insert Row");
           else
-              Log.d(TAG, "XXX Succesfully  Inserted Row : " + place);
+              Log.d(TAG, "XXX Succesfully  Inserted Row : " + place + " " + country + " " + admin );
       }
 
       private boolean checkIfPictureExists(int pict_id, String place) {
@@ -148,8 +156,11 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
           return ret;
       }
 
-      private String getPictureFromDB(int pict_id) {
-           String place = null;
+      private ArrayList<String> getPictureInfoFromDB(int pict_id) {
+           String place = "";
+           String country = "";
+           String admin = "";
+           ArrayList<String> placeList = new ArrayList<String>();
            Cursor cursor = mDataBase.rawQuery(ROW_PICT_ID_EXISTS + pict_id, null);
            if(!(cursor.getCount()<=0)){
               //if (DEBUG) Log.d(TAG, "xxxxxxxxxxxxx Count = " + cursor.getCount());
@@ -158,9 +169,22 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
               if (index != -1) {
                   place = cursor.getString(index);
               }
+              placeList.add(place);
+
+              index = cursor.getColumnIndex(PICTURE_COUNTRY);
+              if (index != -1) {
+              country = cursor.getString(index);
+              }
+              placeList.add(country);
+
+              index = cursor.getColumnIndex(PICTURE_ADMIN);
+              if (index != -1) {
+              admin = cursor.getString(index);
+              }
+              placeList.add(admin);
            }
            cursor.close();
-           return place;
+           return placeList;
       }
 
       private int countRowsinDB() {
@@ -181,9 +205,9 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
               String path = cur.getString(mDataColumn);
 
               // See if the picture exists in DB
-              String placeFound = getPictureFromDB(id);
+              ArrayList<String> placeFound = getPictureInfoFromDB(id);
               if (DEBUG) Log.d(TAG,"Cache Count - " + mMapCache.size());
-              if (placeFound != null) {
+              if (placeFound != null && placeFound.size() > 0) {
                    // Place found in DB...fill up your pockets now... err cache
                    mMapCache.put(id, placeFound);
                    // We have found in DB and updated cache as well.. we are done with this picture
@@ -212,14 +236,21 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
                       }
                       address = geoDecoder.getAddress(mContext);
                       if ((address!= null && address.size() > 0) && (address.get(0) != null)) {
+                    placeFound = new  ArrayList<String> ();
                         // Fetched successfully from Internet
                         place = address.get(0).getLocality();
+                        if (place != null)
+                        placeFound.add(place);
                         country = address.get(0).getCountryName();
+                        if (country != null)
+                        placeFound.add(country);
                         adminArea = address.get(0).getAdminArea();
+                        if (adminArea != null)
+                        placeFound.add(adminArea);
                       } else
                           continue;
                       // Update the DB with pictureID and the place..but again check if it is really
-                      // present in db again. This check 'getPictureFromDB' earlier should have sufficed.
+                      // present in db again. This check 'getPictureInfoFromDB' earlier should have sufficed.
                       // It doesn't hurt to absolutely check against 'pict_id' & 'place' in the db. If not
                       // found, insert the row in the database and of-course update the cache.
                       if (!checkIfPictureExists(id, place) )
@@ -233,7 +264,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
           state = SyncState.SYNC_STATE_COMPLETED;
           cur.close();
           closedb();
-          if (TEST_DB_INITIAL_CREATION_AND_CACHE_UPDATE_FOR_PLACE) {
+          /*if (TEST_DB_INITIAL_CREATION_AND_CACHE_UPDATE_FOR_PLACE) {
           int count =0;
           for(String value: mMapCache.values()) {
               if ((value != null) && value.equals("San Francisco")) {
@@ -241,7 +272,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
               }
             }
             Log.d(TAG,"******************** COUNT VALUES ... " + count);
-          }
+          }*/
       }
 
       private void deletedb() {
@@ -307,33 +338,36 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
       }
 
       public boolean isRowFound(int id, String place) {
-          String placeFound = mMapCache.get(id);
-          //if (DEBUG) Log.d(TAG, "id " + id + "Place " + place + "placeFound " + placeFound);
-          return placeFound.equalsIgnoreCase(place);
+      ArrayList<String> placesFound = mMapCache.get(id);
+      if (!isAtleastSingleValuePresentInList(placesFound))
+      return false;
+      return isValueFoundInList(placesFound, place);
       }
 
       public void updateRow(int id, String place, String country, String admin) {
-          String placeFound = mMapCache.get(id);
-          if (null != placeFound) {
+      ArrayList<String> placesFound = mMapCache.get(id);
+          if (null != placesFound ) {
               return;
           }
-          mMapCache.put(id, place);
+          if (isAtleastSingleValuePresentInList(placesFound))
+          return;
+          mMapCache.put(id, placesFound);
           opendb();
           if (!checkIfPictureExists(id, place))
               insertRow(-1, id, place, country, admin, null, null);
           closedb();
       }
 
-      public String getPlace(int id) {
-          String placeFound = mMapCache.get(id);
+      public ArrayList<String> getPlace(int id) {
+      ArrayList<String> placesFound = mMapCache.get(id);
           //if (DEBUG) Log.d(TAG, "id " + id + "placeFound " + placeFound);
-          if (placeFound == null) {
+          if (placesFound == null || placesFound.size() == 0) {
               // remember, this is a public function
               opendb();
-              placeFound = getPictureFromDB(id);
+              placesFound = getPictureInfoFromDB(id);
               closedb();
           }
-          return placeFound;
+          return placesFound;
       }
 
       public SyncState getState() {
@@ -346,28 +380,93 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
 
       public String retreivePlaceFromStringIfExists(String userFilter) {
           String placeFound = null;
-          for (String place : mMapCache.values()) {
-              if(userFilter.toLowerCase().contains(place.toLowerCase())) {
-              placeFound = place;
-              if (DEBUG) Log.d(TAG,  " xxxx placeFound in the UserString -  " + placeFound);
-                  break;
+          for (ArrayList<String> place : mMapCache.values()) {
+          if ((place == null) || (place.size() == 0))
+          break;
+              if(userFilter.toLowerCase().contains(place.get(INDEX_PLACE).toLowerCase())) {
+                  placeFound = place.get(INDEX_PLACE);
+                  if (DEBUG) Log.d(TAG,  " xxxx placeFound in the UserString -  " + placeFound);
+                      break;
               }
           }
-     /* if (placeFound == null) {
-      // Try and get from d/b
-      String data = null;
-             boolean ret = false;
-              Cursor cursor = mDataBase.rawQuery(GET_PLACES_UNIQUE , null);
-              if(!(cursor.getCount()<=0)){
-                 cursor.moveToFirst();
-                 int index = cursor.getColumnIndex(PICTURE_PLACE);
-                 if (index != -1)
-                   data = cursor.getString(index);
-                 ret = ((data != null) && data.equalsIgnoreCase(place));
-              }
-              cursor.close();
-              return ret;
-      } */
           return placeFound;
+      }
+
+      public ArrayList<String> retreiveAllPlacesFromStringIfExists(String userFilter) {
+      ArrayList<String> placeFound = new ArrayList<String>();
+      String place = "";
+      String country = "";
+      String admin = "";
+      boolean found = false;
+
+          for (ArrayList<String> places : mMapCache.values()) {
+          if ((places == null) || (places.size() == 0))
+          continue;
+          placeFound.clear();
+          found = false;
+          if (places.size() > 0) {
+          place = places.get(INDEX_PLACE);
+          }
+          if (places.size() > 1) {
+          country = places.get(INDEX_COUNTRY);
+          }
+          if (places.size() > 2) {
+          admin = places.get(INDEX_ADMIN);
+          }
+              if((place != null) && userFilter.toLowerCase().contains(place.toLowerCase())) {
+                  found = true;
+                  placeFound.add(place);
+              }
+              if((country != null) && userFilter.toLowerCase().contains(country.toLowerCase())) {
+                  found = true;
+                  placeFound.add(country);
+              }
+
+              if((admin != null) && userFilter.toLowerCase().contains(admin.toLowerCase())) {
+                  found = true;
+                  placeFound.add(admin);
+              }
+
+              if (found) {
+              break;
+              }
+          }
+          if (!found) {
+          placeFound.add("");
+          placeFound.add("");
+          placeFound.add("");
+          }
+          return placeFound;
+      }
+
+      private boolean isAtleastSingleValuePresentInList (ArrayList<String> values) {
+          if (values !=null && (values.size()) > 0) {
+          if (values.get(INDEX_PLACE) == "" &&
+          values.get(INDEX_COUNTRY) == "" &&
+          values.get(INDEX_ADMIN) == "" ) {
+          return  false;
+          }
+          return true;
+          }
+          return false;
+      }
+
+      private boolean isValueFoundInList (ArrayList<String> values, String found) {
+          if (values !=null && (values.size()) > 0) {
+          if (values.get(INDEX_PLACE) == "" &&
+          values.get(INDEX_COUNTRY) == "" &&
+          values.get(INDEX_ADMIN) == "" ) {
+          return  false;
+          }
+          String place = values.get(INDEX_PLACE);
+          String country = values.get(INDEX_COUNTRY);
+          String admin = values.get(INDEX_ADMIN);
+          if (((place != null) && place.equalsIgnoreCase(found)) ||
+          ((country != null) && place.equalsIgnoreCase(country)) ||
+          ((admin != null) && place.equalsIgnoreCase(admin))) {
+          return true;
+          }
+          }
+          return false;
       }
 }
