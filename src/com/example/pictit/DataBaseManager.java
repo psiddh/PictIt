@@ -3,12 +3,7 @@ package com.example.pictit;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import android.content.ContentValues;
@@ -405,13 +400,13 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
           placeFound.clear();
           found = false;
           if (places.size() > 0) {
-          place = places.get(INDEX_PLACE);
+              place = places.get(INDEX_PLACE);
           }
           if (places.size() > 1) {
-          country = places.get(INDEX_COUNTRY);
+              country = places.get(INDEX_COUNTRY);
           }
           if (places.size() > 2) {
-          admin = places.get(INDEX_ADMIN);
+              admin = places.get(INDEX_ADMIN);
           }
               if((place != null) && userFilter.toLowerCase().contains(place.toLowerCase())) {
                   found = true;
@@ -432,21 +427,21 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
               }
           }
           if (!found) {
-          placeFound.add("");
-          placeFound.add("");
-          placeFound.add("");
+              placeFound.add("");
+              placeFound.add("");
+              placeFound.add("");
           }
           return placeFound;
       }
 
-      private boolean isAtleastSingleValuePresentInList (ArrayList<String> values) {
+      public boolean isAtleastSingleValuePresentInList (ArrayList<String> values) {
           if (values !=null && (values.size()) > 0) {
-          if (values.get(INDEX_PLACE) == "" &&
-          values.get(INDEX_COUNTRY) == "" &&
-          values.get(INDEX_ADMIN) == "" ) {
-          return  false;
-          }
-          return true;
+              if (values.get(INDEX_PLACE) == "" &&
+                  values.get(INDEX_COUNTRY) == "" &&
+                  values.get(INDEX_ADMIN) == "" ) {
+                  return  false;
+              }
+              return true;
           }
           return false;
       }

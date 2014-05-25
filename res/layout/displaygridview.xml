@@ -1,12 +1,42 @@
-<?xml version="1.0" encoding="utf-8"?><FrameLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+<ViewSwitcher xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/displayViewSwitcher"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent">
+
+ <RelativeLayout
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent">
+    <ProgressBar
+        android:id="@+id/displayViewProgressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true"
+    />
+    <TextView
+        android:id="@+id/displayViewProgressTextView"
+        android:text="Loading..."
+        android:textColor="#ffffffff"
+        android:textSize="32sp"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true"
+        android:layout_above="@+id/displayViewProgressBar"
+        android:gravity="center"/>
+</RelativeLayout>
+
+<FrameLayout
     android:orientation="vertical"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent">
-<GridView
-    android:id="@+id/gridview"
-    android:layout_width="fill_parent" 
-    android:layout_height="fill_parent"
-/>
+   <GridView
+       android:id="@+id/gridview"
+       android:layout_width="fill_parent"
+       android:layout_height="fill_parent"
+   />
 
 </FrameLayout>
+
+</ViewSwitcher>

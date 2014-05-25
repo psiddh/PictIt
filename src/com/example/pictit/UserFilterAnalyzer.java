@@ -5,14 +5,9 @@ package com.example.pictit;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 
 import android.content.Context;
 import android.util.Log;
@@ -35,6 +30,7 @@ public class UserFilterAnalyzer implements LogUtils{
     DateRangeManager mRangeMgr = new DateRangeManager();
 
     Map<String, Integer[]> mDateRangeKeyWord = new HashMap<String, Integer[]>();
+    Map<String, Integer> mDateRangeConnectorKeyword = new HashMap<String, Integer>();
 
     private static final int KEYWORD_MONTH_NAME = 1;
     private static final int KEYWORD_WEEKEND = 2;
@@ -44,17 +40,20 @@ public class UserFilterAnalyzer implements LogUtils{
     private static final int KEYWORD_TODAY = 6;
     private static final int KEYWORD_SPECIAL = 7;
     private static final int KEYWORD_PHRASES_OTHER = 8;
+
+    private static final int KEYWORD_CONNECTOR_AND = 9;
+    private static final int KEYWORD_CONNECTOR_TO = 10;
+
     private static final int KEYWORD_UNKNOWN = 0xFF;
 
     private int mDateStartIndex = -1;
     private int mDateEndIndex = -1;
-
-    private int mPhraseIndex = -1;
     private int mPlaceIndex = -1;
-
+    /*
+    private int mPhraseIndex = -1;
     private int mMatchState = -1;
     private boolean mMatchStateUpdateNeededForPlace = true;
-    private boolean mIsDateAPharse = false;
+    private boolean mIsDateAPharse = false;*/
 
     private int    MATCH_SUCCESS  = 0;
     private int    MATCH_FAILURE  = 1;
@@ -64,6 +63,7 @@ public class UserFilterAnalyzer implements LogUtils{
     public static final int MATCH_STATE_ONLY_PLACE = 1002;
     public static final int MATCH_STATE_DATES_AND_PLACE = 1003;
     public static final int MATCH_STATE_DATES_AND_PLACE_EXACT = 1004;
+    public static final int MATCH_STATE_DATES_AND_UNKNOWN_PLACE_EXACT = 1005;
 
 
     private void initKeyWords() {
@@ -73,15 +73,24 @@ public class UserFilterAnalyzer implements LogUtils{
         mDateRangeKeyWord.put("february", new Integer[] {KEYWORD_MONTH_NAME, 1});
         mDateRangeKeyWord.put("feb", new Integer[] {KEYWORD_MONTH_NAME, 1});
         mDateRangeKeyWord.put("march", new Integer[] {KEYWORD_MONTH_NAME, 2});
+        mDateRangeKeyWord.put("mar", new Integer[] {KEYWORD_MONTH_NAME, 2});
         mDateRangeKeyWord.put("april", new Integer[] {KEYWORD_MONTH_NAME, 3});
+        mDateRangeKeyWord.put("apr", new Integer[] {KEYWORD_MONTH_NAME, 3});
         mDateRangeKeyWord.put("may", new Integer[] {KEYWORD_MONTH_NAME, 4});
         mDateRangeKeyWord.put("june", new Integer[] {KEYWORD_MONTH_NAME, 5});
+        mDateRangeKeyWord.put("jun", new Integer[] {KEYWORD_MONTH_NAME, 5});
         mDateRangeKeyWord.put("july", new Integer[] {KEYWORD_MONTH_NAME, 6});
+        mDateRangeKeyWord.put("jul", new Integer[] {KEYWORD_MONTH_NAME, 6});
         mDateRangeKeyWord.put("august", new Integer[] {KEYWORD_MONTH_NAME, 7});
+        mDateRangeKeyWord.put("aug", new Integer[] {KEYWORD_MONTH_NAME, 7});
         mDateRangeKeyWord.put("september", new Integer[] {KEYWORD_MONTH_NAME, 8});
+        mDateRangeKeyWord.put("sep", new Integer[] {KEYWORD_MONTH_NAME, 8});
         mDateRangeKeyWord.put("october", new Integer[] {KEYWORD_MONTH_NAME, 9});
+        mDateRangeKeyWord.put("oct", new Integer[] {KEYWORD_MONTH_NAME, 9});
         mDateRangeKeyWord.put("november", new Integer[] {KEYWORD_MONTH_NAME, 10});
+        mDateRangeKeyWord.put("nov", new Integer[] {KEYWORD_MONTH_NAME, 10});
         mDateRangeKeyWord.put("december", new Integer[] {KEYWORD_MONTH_NAME, 11});
+        mDateRangeKeyWord.put("dec", new Integer[] {KEYWORD_MONTH_NAME, 11});
 
         // Date related phrases
         mDateRangeKeyWord.put("last weekend", new Integer[] {KEYWORD_WEEKEND, -1});
@@ -199,6 +208,10 @@ public class UserFilterAnalyzer implements LogUtils{
         // Other phrases
         mDateRangeKeyWord.put("couple of weeks",new Integer[] {KEYWORD_PHRASES_OTHER, -1});
         mDateRangeKeyWord.put("beginning of the world",new Integer[] {KEYWORD_PHRASES_OTHER, -1});
+
+        // Connector key words
+        mDateRangeConnectorKeyword.put("and", KEYWORD_CONNECTOR_AND);
+        mDateRangeConnectorKeyword.put("to", KEYWORD_CONNECTOR_TO);
     }
 
     public UserFilterAnalyzer(Context context, String filter) {
@@ -280,12 +293,12 @@ public class UserFilterAnalyzer implements LogUtils{
     }
 
     private boolean isWordAPreposition(String word){
-    String fillers[] = {"At", "IN", "FROM", "AROUND", "NEAR", "NEAR TO"};
-    for (String s : fillers) {
-        if (s.equalsIgnoreCase(word))
-        return true;
+        String fillers[] = {"At", "IN", "FROM", "AROUND", "NEAR", "NEAR TO", "@"};
+        for (String s : fillers) {
+            if (s.equalsIgnoreCase(word))
+                return true;
          }
-    return false;
+         return false;
     }
 
     public int compareUserFilterForCity(String compareString) {
@@ -347,7 +360,7 @@ public class UserFilterAnalyzer implements LogUtils{
         }
         // Looks like a valid single date at this point
         long val1 = range1.getTimeInMillis();
-        long val2 = val1 + SINGLE_DAY_OFFSET_IN_MS * (offset - 1);
+        long val2 = val1 + SINGLE_DAY_OFFSET_IN_MS * (offset);
         Pair<Long, Long> p = new Pair<Long, Long>(val1,val2);
         return p;
     }
@@ -356,12 +369,18 @@ public class UserFilterAnalyzer implements LogUtils{
         //if (DEBUG) Log.d(TAG, "getDateRange String : " + compareString);
         int index = 0;
         int[] validRange = {0,0,0};
+        boolean isSecondRange = false;
         int unknownCnt = 0;
         Calendar range1 = getNewCalObj(true);
         Calendar range2 = getNewCalObj(false);
         for (index = 0; index < mWords.length; index++) {
             if(!mDateRangeKeyWord.containsKey(mWords[index].toLowerCase())) {
+                    continue;
+            } else {
+            if (mDateRangeConnectorKeyword.containsKey(mWords[index].toLowerCase())) {
+                isSecondRange |= isCalendarObjSet(range1);
                 continue;
+            }
             }
             Integer[] keyword_Val = mDateRangeKeyWord.get(mWords[index].toLowerCase());
             if (keyword_Val == null) {
@@ -372,30 +391,36 @@ public class UserFilterAnalyzer implements LogUtils{
                   if (mDateStartIndex == -1)
                       mDateStartIndex = index;
                   mDateEndIndex = index;
-                  if (!range1.isSet(Calendar.YEAR) && !isCalendarObjSet(range2) && (!(validRange[1] == 1 || validRange[2] == 1)))
-                    range1.set(Calendar.YEAR,keyword_Val[1]);
-                  else
-                    range2.set(Calendar.YEAR,keyword_Val[1]);
+                  if (!range1.isSet(Calendar.YEAR) && !isSecondRange )
+                      range1.set(Calendar.YEAR,keyword_Val[1]);
+                  else {
+                      isSecondRange = true;
+                      range2.set(Calendar.YEAR,keyword_Val[1]);
+                  }
                   validRange[0]++;
                   break;
               case KEYWORD_MONTH_NAME :
                   if (mDateStartIndex == -1)
                       mDateStartIndex = index;
                   mDateEndIndex = index;
-                  if (!range1.isSet(Calendar.MONTH) && (!(validRange[0] == 1 || validRange[2] == 1)))
+                  if (!range1.isSet(Calendar.MONTH) && !isSecondRange)
                       range1.set(Calendar.MONTH,keyword_Val[1]);
-                  else
+                  else {
+                    isSecondRange = true;
                     range2.set(Calendar.MONTH,keyword_Val[1]);
+                  }
                   validRange[1]++;
                   break;
               case KEYWORD_MONTH_DAYS :
                   if (mDateStartIndex == -1)
                       mDateStartIndex = index;
                   mDateEndIndex = index;
-                  if (!range1.isSet(Calendar.DAY_OF_MONTH) && (!(validRange[0] == 1 || validRange[1] == 1)))
+                  if (!range1.isSet(Calendar.DAY_OF_MONTH)&& !isSecondRange )
                       range1.set(Calendar.DAY_OF_MONTH,keyword_Val[1]);
-                  else
+                  else {
+                    isSecondRange = true;
                     range2.set(Calendar.DAY_OF_MONTH,keyword_Val[1]);
+                  }
                   validRange[2]++;
                   break;
               case KEYWORD_WEEKEND :
@@ -535,6 +560,20 @@ public class UserFilterAnalyzer implements LogUtils{
         }
         return cal;
     }
+
+    private boolean doesPrepositionOccurAfterDates() {
+        boolean ret = false;
+        if ((mDateEndIndex == -1) || (mDateEndIndex >= mWords.length))
+            return ret;
+        for (int index = mDateEndIndex; index < mWords.length; index++) {
+            if (isWordAPreposition(mWords[index])) {
+                ret = true;
+                break;
+            }
+        }
+        return ret;
+    }
+
     @Override
     public String toString() {
       // TODO Auto-generated method stub
@@ -550,13 +589,13 @@ public class UserFilterAnalyzer implements LogUtils{
     public int getMatchState() {
         int mMatchState = MATCH_STATE_NONE;
         Pair<Long, Long> mPairRange = getDateRange(mUserFilter);
-        //String place = mDbHelper.retreivePlaceFromStringIfExists(mUserFilter);
         ArrayList<String> places = mDbHelper.retreiveAllPlacesFromStringIfExists(mUserFilter);
         String place = "";
         String country = "";
         String admin = "";
         boolean alsoMatchCity = false;
         boolean alsoMatchDate = false;
+        boolean bMatchPlace = false;
 
         if (places != null && places.size() > 0 ) {
             if (places.size() > 0) {
@@ -569,14 +608,17 @@ public class UserFilterAnalyzer implements LogUtils{
                     admin = places.get(2);
                 }
 
-            if (place != null) {
+            if (place != null && place != "") {
                 alsoMatchCity |= isPrepositionKeywordFoundBeforeFilter(place, true);
+                bMatchPlace = true;
             }
-            if (country != null) {
+            if (country != null && country != "") {
                 alsoMatchCity |= isPrepositionKeywordFoundBeforeFilter(country, true);
+                bMatchPlace = true;
             }
-            if (admin != null)  {
+            if (admin != null && admin != "")  {
                 alsoMatchCity |= isPrepositionKeywordFoundBeforeFilter(admin, true);
+                bMatchPlace = true;
             }
         }
         //if (place != null) {
@@ -584,7 +626,7 @@ public class UserFilterAnalyzer implements LogUtils{
         //}
         alsoMatchDate = isPrepositionKeywordFoundBeforeFilter(getStartDate(), false);
 
-        if ((mPairRange != null) && (place != null)) {
+        if ((mPairRange != null) && (bMatchPlace)) {
             if (alsoMatchCity || alsoMatchDate) {
                  mMatchState = MATCH_STATE_DATES_AND_PLACE_EXACT;
             } else {
@@ -592,7 +634,10 @@ public class UserFilterAnalyzer implements LogUtils{
             }
         } else if (mPairRange != null) {
             // place is null here
-            mMatchState = MATCH_STATE_ONLY_DATES;
+            if (doesPrepositionOccurAfterDates()) {
+            mMatchState = MATCH_STATE_DATES_AND_UNKNOWN_PLACE_EXACT;
+            } else
+                mMatchState = MATCH_STATE_ONLY_DATES;
         } else if (place != null) {
             mMatchState = MATCH_STATE_ONLY_PLACE;
         } else {

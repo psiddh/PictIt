@@ -6,6 +6,8 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 
+import com.example.pictit.DataBaseManager.SyncState;
+
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.LoaderManager.LoaderCallbacks;
@@ -38,9 +40,13 @@ import android.util.SparseBooleanArray;
 import android.view.ActionMode;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.view.Display;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -55,8 +61,12 @@ import android.widget.FrameLayout;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.ShareActionProvider;
+import android.widget.TextSwitcher;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.ViewSwitcher;
+import android.widget.ViewSwitcher.ViewFactory;
 public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cursor>, LogUtils {
     private String TAG = "Pickit/DisplayView";
     // CPU & connectivity data intensive operation guarded by this flag
@@ -90,8 +100,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     Pair<Long, Long> mTodayPair = mRangeMgr.getToday();
 
     Pair<Long, Long> mLastWeekEnd = mRangeMgr.getLastWeekEnd();
-
-    String mUserFilterContainsAPlace = null;
 
     ArrayList<String> mUserFilterContainsAPLACES = null;
 
@@ -147,6 +155,9 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     DisplayMetrics mOutMetrics;
     float mDensity;
 
+    ViewSwitcher mViewSwitcher;
+    boolean mShowGrid = false;
+
     private Handler mHandler = new Handler(Looper.getMainLooper()) {
             public void handleMessage (Message msg) {
                  switch (msg.what) {
@@ -175,8 +186,8 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         String title = getTitleFromPair(mPairRange);
         mMatchState = mAnalyzer.getMatchState();
         updateTitle(title);
-        setProgressBarIndeterminateVisibility(true);
-
+        setProgressBarIndeterminateVisibility(false);
+        mViewSwitcher = (ViewSwitcher) findViewById(R.id.displayViewSwitcher);
         mActBar.setHomeButtonEnabled(true);
         mActBar.setDisplayHomeAsUpEnabled(true);
 
@@ -187,7 +198,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         mOutMetrics= new DisplayMetrics ();
         mDisplay.getMetrics(mOutMetrics);
         mDensity = this.getResources().getDisplayMetrics().density;
-
+        mViewSwitcher.setBackgroundColor(Color.DKGRAY);
         /*mgridView = (GridView) findViewById(R.id.gridview);
         mgridView.setBackgroundColor(color.darker_gray);
         mgridView.setVerticalSpacing(1);
@@ -206,7 +217,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         setupViews();
 
         if (mDbHelper.getState() == DataBaseManager.SyncState.SYNC_STATE_COMPLETED) {
-            mUserFilterContainsAPlace = mDbHelper.retreivePlaceFromStringIfExists(mUserFilter);
             mUserFilterContainsAPLACES = mDbHelper.retreiveAllPlacesFromStringIfExists(mUserFilter);
         }
         // Register to receive messages.
@@ -223,6 +233,18 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         if (pair == null)
           return title;
 
+        mTitleCalendar.clear();
+        mTitleCalendar.setTimeInMillis(pair.first);
+        title += mTitleCalendar.getDisplayName(Calendar.MONTH, Calendar.SHORT, Locale.ENGLISH);
+        title += " ";
+
+        title += mTitleCalendar.get(Calendar.DAY_OF_MONTH);
+        title += ", '";
+
+        title += mTitleCalendar.get(Calendar.YEAR) % 100;
+
+        title += " - ";
+
         if (pair.second >= current.getTimeInMillis()) {
             secondPair = current.getTimeInMillis();
             title += "(Today) ";
@@ -231,16 +253,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             secondPair = pair.second;
         }
         mTitleCalendar.setTimeInMillis(secondPair);
-        title += mTitleCalendar.getDisplayName(Calendar.MONTH, Calendar.SHORT, Locale.ENGLISH);
-        title += " ";
-
-        title += mTitleCalendar.get(Calendar.DAY_OF_MONTH);
-        title += ", '";
-
-        title += mTitleCalendar.get(Calendar.YEAR) % 100;
-        title += " - ";
-        mTitleCalendar.clear();
-        mTitleCalendar.setTimeInMillis(pair.first);
         title += mTitleCalendar.getDisplayName(Calendar.MONTH, Calendar.SHORT, Locale.ENGLISH);
         title += " ";
 
@@ -257,7 +269,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         mActBar.setTitle(title);
     }
 
-    private void updateSubTitleAndTitleIfNecessary(String placeFound) {
+    private void updateSubTitleAndTitleIfNecessary() {
         String subTitle = "";
         for (int index = 0; index < mPlaceList.size(); index++) {
             if (index != 0) {
@@ -326,7 +338,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         mDisplayImages.setChoiceMode(mDisplayImages.CHOICE_MODE_MULTIPLE_MODAL);
         mDisplayImages.setMultiChoiceModeListener(new MultiChoiceModeListener());
         mDisplayImages.setDrawSelectorOnTop(true);
-
+        //setupTextSwitcher();
         //mDisplayImages.setNumColumns(metrics.widthPixels/200);
         //mDisplayImages.setNumColumns(3);
         //mDisplayImages.setClipToPadding(false);
@@ -448,7 +460,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_display_view, menu);
+        if (mShowGrid) {
+            getMenuInflater().inflate(R.menu.menu_display_view, menu);
+            MenuItem item = menu.findItem(R.id.menu_item_pick_all);
+            item.setVisible(true);
+        }
         return true;
     }
 
@@ -524,24 +540,17 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         return null;
     }
 
-    private Intent createShareIntent() {
-         //Intent shareIntent = new Intent(Intent.ACTION_SEND);
+    /*private Intent createShareIntent() {
         Intent shareIntent = new Intent();
         shareIntent.setAction(Intent.ACTION_SEND_MULTIPLE);
-
-
          for (int i = 0; i < mList.size(); i++) {
              Uri imageUri = Uri.parse("file://" + mList.get(i));
              mImageUris.add(imageUri);
          }
-
          shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, mImageUris);
          shareIntent.setType("image/jpeg");
-         //shareIntent.setType("text/plain");
-         //shareIntent.putExtra(Intent.EXTRA_TEXT,
-                   //"http://androidtrainningcenter.blogspot.in");
          return shareIntent;
-    }
+    }*/
 
     public class CheckableLayout extends FrameLayout implements Checkable {
         private boolean mChecked = false;
@@ -796,7 +805,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
          */
         protected String doInBackground(Object... params) {
             if (isCancelled()) return null;
-            setProgressBarIndeterminateVisibility(true);
+            //setProgressBarIndeterminateVisibility(true);
            // Again check for isCancelled() , there could be potential race conditions here
            // when task is cancelled. The thread that just got cancelled (as a result of configuration changes)
            // still latches onto old cursor object
@@ -829,6 +838,13 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         }
         @Override
         protected void onPostExecute(Object result) {
+            if (mList.size() == 0) {
+                // No results found! Show the indication to user
+                View v = mViewSwitcher.findViewById(R.id.displayViewProgressBar);
+                v.setVisibility(View.GONE);
+                TextView txtView = (TextView) mViewSwitcher.findViewById(R.id.displayViewProgressTextView);
+                txtView.setText("Sorry! No results found. Try again ..");
+            }
             setProgressBarIndeterminateVisibility(false);
         }
 
@@ -954,15 +970,18 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 // TBD All of the parse logic should eventually be wrapped into UserFileterAnalyzer
                 if (mSupportGeoCoder) { // && (mUserFilter.toLowerCase().contains(mPlaceFilter.toLowerCase()))) {
                    GeoDecoder geoDecoder = null;
-                   String addr = null;
+                   SyncState dbState = mDbHelper.getState();
+                   int matchState = mMatchState;
                    Integer currentId = cur.getInt(id);
-                   if (mDbHelper.getState() != DataBaseManager.SyncState.SYNC_STATE_COMPLETED) {
-                       mUserFilterContainsAPlace = mDbHelper.retreivePlaceFromStringIfExists(mUserFilter);
+                   if (dbState != DataBaseManager.SyncState.SYNC_STATE_COMPLETED) {
+                       matchState = mAnalyzer.getMatchState();
                        mUserFilterContainsAPLACES = mDbHelper.retreiveAllPlacesFromStringIfExists(mUserFilter);
                    }
+
                    boolean alsoMatchCity = false;
-                   if (mUserFilterContainsAPLACES != null && mUserFilterContainsAPLACES.size() > 0) {
-                       alsoMatchCity = (UserFilterAnalyzer.MATCH_STATE_DATES_AND_PLACE_EXACT == mAnalyzer.getMatchState());
+                   if (mUserFilterContainsAPLACES != null && mUserFilterContainsAPLACES.size() > 0 && 
+                   mDbHelper.isAtleastSingleValuePresentInList(mUserFilterContainsAPLACES)) {
+                       alsoMatchCity = (UserFilterAnalyzer.MATCH_STATE_DATES_AND_PLACE_EXACT == matchState);
                        if (added && alsoMatchCity) {
                            added = false;
                        }
@@ -983,28 +1002,36 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                    if((attrLATITUDE !=null)
                      && (attrLATITUDE_REF !=null)
                      && (attrLONGITUDE != null)
-                     && (attrLONGITUDE_REF !=null)){
+                     && (attrLONGITUDE_REF !=null)) {
+                       String placeFound = "";
+                       String countryFound = "";
+                       String adminAreaFound = "";
+                       ArrayList<String> placeList;
                        // It has some valid values
                        // Try to read from Cache / db
-                       final ArrayList<String> placeList = mDbHelper.getPlace(currentId);
-                       if (placeList == null || placeList.size() == 0) {
-                       break;
-                       }
-                       final String placeFound  = placeList.get(0);
-                       if (placeList != null && placeList.size() < 2) {
-                       break;
-                       }
-                       final String countryFound  = placeList.get(1);
-                       if (placeList != null && placeList.size() < 3) {
-                       break;
-                       }
-                       final String adminAreaFound  = placeList.get(2);
-                       if (placeFound == null) {
+
+                       do {
+                           placeList = mDbHelper.getPlace(currentId);
+                               if (placeList == null || placeList.size() == 0) {
+                                   break;
+                               }
+                               placeFound  = placeList.get(0);
+                               if (placeList != null && placeList.size() < 2) {
+                                  break;
+                               }
+                               countryFound  = placeList.get(1);
+                               if (placeList != null && placeList.size() < 3) {
+                                  break;
+                               }
+                               adminAreaFound  = placeList.get(2);
+                       } while (false);
+
+                       if (mDbHelper.isAtleastSingleValuePresentInList(placeList) == false) {
                            // Place not found in cache or db ,but it has a valid GPS cod-ordinates
                            // Try and fallback on GeoCoder API to retrieve the place.
-                       } else if((mUserFilter.toLowerCase().contains(placeFound.toLowerCase()) ||
-                         (mUserFilter.toLowerCase().contains(countryFound.toLowerCase())) ||
-                         (mUserFilter.toLowerCase().contains(adminAreaFound.toLowerCase())))) {
+                       } else if((mUserFilter.toLowerCase().contains(placeFound.toLowerCase())    ||
+                                 (mUserFilter.toLowerCase().contains(countryFound.toLowerCase())) ||
+                                 (mUserFilter.toLowerCase().contains(adminAreaFound.toLowerCase())))) {
                            // Wow... we have the place found either in the cache or db..
                            int index = mPlaceList.indexOf(placeFound.toUpperCase());
                            if (index == -1 && mUserFilter.toLowerCase().contains(placeFound.toLowerCase())) {
@@ -1021,7 +1048,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                                mPlaceList.add(adminAreaFound.toUpperCase());
                                mUpdateSubTitleRequired |= IsAdminArea;
                            }
-                           alsoMatchCity = (UserFilterAnalyzer.MATCH_STATE_DATES_AND_PLACE_EXACT == mAnalyzer.getMatchState());
+                           alsoMatchCity = (UserFilterAnalyzer.MATCH_STATE_DATES_AND_PLACE_EXACT == matchState);
                            if (dateRangeMatchFound != -1) {
                                // DateRange has been set
                                if ((dateRangeMatchFound == 0) && (alsoMatchCity)) {
@@ -1042,7 +1069,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                                runOnUiThread(new Runnable() {
                                    @Override
                                    public void run() {
-                                       updateSubTitleAndTitleIfNecessary(placeFound);
+                                       updateSubTitleAndTitleIfNecessary();
                                        mUpdateSubTitleRequired = 0;
                                    }
                                });
@@ -1050,9 +1077,19 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                            break;
                        } else {
                            // OK some place exists in cache / db but does not match with UserFilter
-                           break;
-                       }
+
+                           // At this point show a UI indication that something could have gone wrong
+
+                           // 'Jan pictures in Timbuktu' . Here Timbuktu is as good a string. We do not
+                           // have intelligence to treat this as a place. So all pictures in Jan will
+                           // show up anyways ??? Not really I guess
+                           if ((matchState == UserFilterAnalyzer.MATCH_STATE_DATES_AND_UNKNOWN_PLACE_EXACT) && added)
+                           added = false;  // Some unknown place was asked to match.. Sorry User!
+                               break;
+                           }
                    } else {
+                       if ((matchState == UserFilterAnalyzer.MATCH_STATE_DATES_AND_UNKNOWN_PLACE_EXACT) && added)
+                           added = false;  // Some unknown place was asked to match.. Sorry User!
                        continue;
                    }
 
@@ -1101,7 +1138,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                        mDbHelper.updateRow(currentId, locality, country, adminArea);
                    }
                    if ((locality != null) && (0 == mAnalyzer.compareUserFilterForCity(locality))) {
-                       alsoMatchCity = (UserFilterAnalyzer.MATCH_STATE_DATES_AND_PLACE_EXACT == mAnalyzer.getMatchState());
+                       alsoMatchCity = (UserFilterAnalyzer.MATCH_STATE_DATES_AND_PLACE_EXACT == matchState);
                      // At this point, 'locality' / 'city' is matched.
                      // check 'dateRangeMatchFound' has been set or not
 
@@ -1139,6 +1176,18 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
             if (added) {
                 addtoListIfNotFound(path);
+                if (mShowGrid == false && mList.size() == 1) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            // Show the grid view and turn on indeterminate dialog in title region
+                            mViewSwitcher.showNext();
+                            mShowGrid = true;
+                            setProgressBarIndeterminateVisibility(true);
+                            invalidateOptionsMenu();
+                        }
+                    });
+                }
                 return getPicture(path);
             }
             return null;

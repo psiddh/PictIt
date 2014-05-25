@@ -4,17 +4,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import android.media.ExifInterface;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.provider.MediaStore;
 import android.app.Activity;
 import android.app.SearchManager;
-import android.app.LoaderManager.LoaderCallbacks;
-import android.content.CursorLoader;
 import android.content.Intent;
-import android.content.Loader;
 import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -23,7 +19,6 @@ import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.speech.RecognizerIntent;
 import android.util.Log;
-import android.util.Pair;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -290,27 +285,29 @@ public class MainActivity extends Activity {
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        //mDrawerToggle.onConfigurationChanged(newConfig);
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Pass the event to ActionBarDrawerToggle, if it returns
-        // true, then it has handled the app icon touch event
-        //if (mDrawerToggle.onOptionsItemSelected(item)) {
-          //return true;
-        //}
-        // Handle your other action bar items...
+        switch (item.getItemId()) {
+            case android.R.id.home:
+                onBackPressed();
+                break;
+            default:
+                break;
+        }
         return super.onOptionsItemSelected(item);
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_main1);
         // Nah! don't do this as well
         //setupDrawers();
         setupTextSwitcher();
+        getActionBar().setHomeButtonEnabled(true);
+        getActionBar().setDisplayHomeAsUpEnabled(true);
         mProgress = (ProgressBar) findViewById(R.id.progressBar1);
         Intent msgIntent = new Intent(this, SyncIntentService.class);
         startService(msgIntent);

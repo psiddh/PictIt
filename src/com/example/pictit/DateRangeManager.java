@@ -5,7 +5,6 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Locale;
 
-import android.net.ParseException;
 import android.util.Log;
 import android.util.Pair;
 
