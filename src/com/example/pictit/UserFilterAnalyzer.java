@@ -375,12 +375,12 @@ public class UserFilterAnalyzer implements LogUtils{
         Calendar range2 = getNewCalObj(false);
         for (index = 0; index < mWords.length; index++) {
             if(!mDateRangeKeyWord.containsKey(mWords[index].toLowerCase())) {
-                    continue;
-            } else {
-            if (mDateRangeConnectorKeyword.containsKey(mWords[index].toLowerCase())) {
-                isSecondRange |= isCalendarObjSet(range1);
                 continue;
-            }
+            } else {
+                if (mDateRangeConnectorKeyword.containsKey(mWords[index].toLowerCase())) {
+                    isSecondRange |= isCalendarObjSet(range1);
+                    continue;
+                }
             }
             Integer[] keyword_Val = mDateRangeKeyWord.get(mWords[index].toLowerCase());
             if (keyword_Val == null) {

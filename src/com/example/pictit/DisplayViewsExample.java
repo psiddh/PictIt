@@ -32,7 +32,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.provider.MediaStore;
-import android.support.v4.content.LocalBroadcastManager;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Pair;
@@ -40,13 +39,9 @@ import android.util.SparseBooleanArray;
 import android.view.ActionMode;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
 import android.view.Display;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -61,12 +56,10 @@ import android.widget.FrameLayout;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.ShareActionProvider;
-import android.widget.TextSwitcher;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ViewSwitcher;
-import android.widget.ViewSwitcher.ViewFactory;
 public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cursor>, LogUtils {
     private String TAG = "Pickit/DisplayView";
     // CPU & connectivity data intensive operation guarded by this flag
@@ -133,6 +126,9 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
     private enum SelectState {
            ALL,
+           ALL_INPROGRESS,
+           ALL_DONE,
+           ALL_PICK_INDIVIDUAL,
            CHERRY_PICK,
            NONE
     }
@@ -219,11 +215,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         if (mDbHelper.getState() == DataBaseManager.SyncState.SYNC_STATE_COMPLETED) {
             mUserFilterContainsAPLACES = mDbHelper.retreiveAllPlacesFromStringIfExists(mUserFilter);
         }
-        // Register to receive messages.
-        // We are registering an observer (mMessageReceiver) to receive Intents
-        // with actions named "custom-event-name".
-        LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver,
-            new IntentFilter("custom-event-name"));
     }
 
     private String getTitleFromPair(Pair<Long, Long> pair) {
@@ -292,7 +283,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         if (mLoadImagesInBackground != null && !mLoadImagesInBackground.isCancelled()) {
         }
         mHandler.removeMessages(SELECT_ALL_ITEMS);
-        setShareIntent(null);
+        //setShareIntent(null);
     }
 
     @Override
@@ -310,7 +301,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
     @Override
     public void onDestroy() {
-       LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver);
        if (!mLoadImagesInBackground.isCancelled()) {
            mLoadImagesInBackground.cancel(true);
        }
@@ -477,10 +467,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             case R.id.menu_item_pick_all:
                 mState = SelectState.ALL;
                 selectAll();
+                mState = SelectState.ALL_DONE;
+                mHandler.removeMessages(SELECT_ALL_ITEMS);
                 Message mesg = new Message();
                 mesg.what = SELECT_ALL_ITEMS;
-                mHandler.removeMessages(SELECT_ALL_ITEMS);
-                mHandler.sendMessageDelayed(mesg, 1000);
+                mHandler.sendMessageDelayed(mesg, 100);
                 return true;
             case android.R.id.home:
                 onBackPressed();
@@ -504,6 +495,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
     private void selectAll() {
         for(int i=0; i < mImageAdapter.getCount(); i++) {
+            mState = SelectState.ALL_INPROGRESS;
             mDisplayImages.setItemChecked(i, true);
         }
         return;
@@ -609,6 +601,8 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         public void onDestroyActionMode(ActionMode mode) {
             setShareIntent(null);
             mItem.setEnabled(false);
+            mState = SelectState.NONE;
+            mImageUris.clear();
         }
 
         public void onItemCheckedStateChanged(ActionMode mode, int position,
@@ -616,12 +610,27 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             int selectCount = mDisplayImages.getCheckedItemCount();
             String operation = (mState == SelectState.ALL) ? "selected" : "picked";
             switch (selectCount) {
-            case 1:
-                mode.setSubtitle("1 " + operation);
-                break;
-            default:
-                mode.setSubtitle("" + selectCount + " " + operation);
-                break;
+                case 1:
+                    mode.setSubtitle("1 " + operation);
+                    break;
+                default:
+                    mode.setSubtitle("" + selectCount + " " + operation);
+                    break;
+            }
+
+            if(mList.size() >= position && mState != SelectState.ALL_INPROGRESS) {
+                Uri imageUri = Uri.parse("file://" + mList.get(position));
+                if (checked && !mImageUris.contains(imageUri))
+                   mImageUris.add(imageUri);
+                else
+                   mImageUris.remove(imageUri);
+                Intent shareIntent = new Intent();
+                shareIntent.setAction(Intent.ACTION_SEND_MULTIPLE);
+                shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, mImageUris);
+                shareIntent.setType("image/jpeg");
+                if (mShareActionProvider != null) {
+                    mShareActionProvider.setShareIntent(shareIntent);
+               }
             }
         }
     }
@@ -843,7 +852,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 View v = mViewSwitcher.findViewById(R.id.displayViewProgressBar);
                 v.setVisibility(View.GONE);
                 TextView txtView = (TextView) mViewSwitcher.findViewById(R.id.displayViewProgressTextView);
-                txtView.setText("Sorry! No results found. Try again ..");
+                txtView.setText("Sorry! No results found. Try again ...");
             }
             setProgressBarIndeterminateVisibility(false);
         }
@@ -875,14 +884,18 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             float dpWidth  = mOutMetrics.widthPixels / mDensity;
             int width=(int) (dpWidth);
             int height=(int) (dpHeight);
+            int numOfColumns = -1;
             //String dateString = intf.getAttribute(ExifInterface.TAG_DATETIME);
             //if (DEBUG && (null != dateString)) Log.d(TAG, dateString);
             if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE ) {
-                mDisplayImages.setNumColumns(3);
+                numOfColumns = 3;
                 width = height;
             } else {
-                mDisplayImages.setNumColumns(2);
+                numOfColumns = 2;
             }
+            // TBD : This needs to be changed
+            mDisplayImages.setNumColumns(numOfColumns);
+
 
             if (intf.hasThumbnail() ) {
                byte[] thumbnail = intf.getThumbnail();
@@ -890,7 +903,9 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                bitmap = BitmapFactory.decodeByteArray(thumbnail, 0, thumbnail.length);
                if (bitmap != null) {
                    newBitmap = Bitmap.createScaledBitmap(bitmap, width, width, true);
-                   bitmap.recycle();
+                   if (newBitmap!= bitmap){
+                       bitmap.recycle();
+                   }
                    if (newBitmap != null) {
                        return newBitmap;
                    }
@@ -903,7 +918,9 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                    bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(imageUri));
                    if (bitmap != null) {
                        newBitmap = Bitmap.createScaledBitmap(bitmap, width, width, true);
-                       bitmap.recycle();
+                       if (newBitmap!= bitmap){
+                           bitmap.recycle();
+                       }
                        if (newBitmap != null) {
                            return newBitmap;
                        }
