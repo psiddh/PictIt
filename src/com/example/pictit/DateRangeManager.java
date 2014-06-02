@@ -77,15 +77,27 @@ public class DateRangeManager implements LogUtils{
     public Pair<Long,Long> getToday() {
        Long val1, val2;
         Calendar today = Calendar.getInstance((Locale.getDefault()));
+        Calendar today1 = Calendar.getInstance((Locale.getDefault()));
         // reset hour, minutes, seconds and millis
+        today.set(Calendar.YEAR, mYear);
+        today.set(Calendar.MONTH, mMonth);
+        today.set(Calendar.DAY_OF_MONTH, mDayOfMonth);
         today.set(Calendar.HOUR_OF_DAY, 0);
         today.set(Calendar.MINUTE, 0);
         today.set(Calendar.SECOND, 0);
         today.set(Calendar.MILLISECOND, 0);
         val1 = today.getTimeInMillis();
-        today.add(Calendar.DATE, 1);
-        val2 = today.getTimeInMillis();
-        return new Pair<Long, Long>(val1,val2);
+        //today.clear();
+        today1.set(Calendar.YEAR, mYear);
+        today1.set(Calendar.MONTH, mMonth);
+        today1.set(Calendar.DAY_OF_MONTH, mDayOfMonth);
+        today1.set(Calendar.HOUR_OF_DAY, 23);
+        today1.set(Calendar.MINUTE, 59);
+        today1.set(Calendar.SECOND, 59);
+        today1.set(Calendar.MILLISECOND, 999);
+        val2 = today1.getTimeInMillis();
+        Pair<Long, Long> p = new Pair<Long, Long>(val1,val2);
+        return p;
     }
 
     public Pair<Long,Long> getRange(Calendar cal1, Calendar cal2) {

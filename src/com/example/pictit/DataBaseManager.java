@@ -345,7 +345,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
               return;
           }
           if (isAtleastSingleValuePresentInList(placesFound))
-          return;
+              return;
           mMapCache.put(id, placesFound);
           opendb();
           if (!checkIfPictureExists(id, place))

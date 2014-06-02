@@ -13,7 +13,6 @@ public class SyncIntentService extends IntentService implements LogUtils {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        //Toast.makeText(this, "service starting", Toast.LENGTH_SHORT).show();
         mDbHelper = DataBaseManager.getInstance(this);
         return super.onStartCommand(intent,flags,startId);
     }

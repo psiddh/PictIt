@@ -76,23 +76,13 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     Calendar mCalendar = Calendar.getInstance((Locale.getDefault()));
     private ShareActionProvider mShareActionProvider;
 
-    // ************************************************************************
-    // Set of Filters to compare against
-    String[] mMonthNamesFilter = {"January", "february","March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
-    // Last WeekEnd
-    String mLastWeekEndFilter = "Last Weekend";
-    // Today
-    String mTodayFilter = "Today";
-
     String mUserFilter;
 
     DateRangeManager mRangeMgr = new DateRangeManager();
 
     Pair<Long, Long> mPairRange = null;
 
-    Pair<Long, Long> mTodayPair = mRangeMgr.getToday();
-
-    Pair<Long, Long> mLastWeekEnd = mRangeMgr.getLastWeekEnd();
+    boolean mPhraseAsTitle = false;
 
     ArrayList<String> mUserFilterContainsAPLACES = null;
 
@@ -218,12 +208,16 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     }
 
     private String getTitleFromPair(Pair<Long, Long> pair) {
+        long ms_in_day = 86400000;
         Calendar current = Calendar.getInstance((Locale.getDefault()));
         long secondPair = 0;
         String title = "";
         if (pair == null)
           return title;
 
+        if (pair.second - pair.first <= ms_in_day) {
+            mIsTitleDate = true;
+        }
         mTitleCalendar.clear();
         mTitleCalendar.setTimeInMillis(pair.first);
         title += mTitleCalendar.getDisplayName(Calendar.MONTH, Calendar.SHORT, Locale.ENGLISH);
@@ -234,6 +228,9 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
         title += mTitleCalendar.get(Calendar.YEAR) % 100;
 
+        if (pair.second - pair.first <= ms_in_day) {
+            return title;
+        }
         title += " - ";
 
         if (pair.second >= current.getTimeInMillis()) {
@@ -257,6 +254,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     }
 
     private void updateTitle(String title) {
+        String phrase = mAnalyzer.getPhraseIfExistsInUserFilter();
+        if (phrase != null) {
+            phrase = phrase.toUpperCase() + " : PICTURES " + title;
+          title = phrase;
+        }
         mActBar.setTitle(title);
     }
 
@@ -272,7 +274,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         if (!mIsTitleDate)
             mActBar.setTitle(subTitle);
         else {
-            //int index = mList.indexOf(mActBar.getTitle().toString());
             mActBar.setSubtitle(subTitle);
         }
     }
@@ -283,7 +284,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         if (mLoadImagesInBackground != null && !mLoadImagesInBackground.isCancelled()) {
         }
         mHandler.removeMessages(SELECT_ALL_ITEMS);
-        //setShareIntent(null);
     }
 
     @Override
@@ -813,18 +813,17 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
          * Load images in the background, and display each image on the screen.
          */
         protected String doInBackground(Object... params) {
-            if (isCancelled()) return null;
-            //setProgressBarIndeterminateVisibility(true);
            // Again check for isCancelled() , there could be potential race conditions here
            // when task is cancelled. The thread that just got cancelled (as a result of configuration changes)
            // still latches onto old cursor object
-
-            while (!mCursor.isClosed() && mCursor.moveToPrevious() && !isCancelled()) {
+            do {
+                if (mCursor.isClosed() || isCancelled())
+                    return null;
                 Bitmap bmp = getImgBasedOnUserFilter(mCursor);
                 if (bmp != null) {
                   publishProgress(bmp);
                 }
-            }
+            } while (!mCursor.isClosed() && mCursor.moveToPrevious() && !isCancelled());
             mCursor.close();
             return null;
         }
@@ -932,6 +931,14 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             return null;
         }
 
+        private boolean checkPhraseTitleBeforeAdding(boolean alsoMatchCity) {
+           boolean added = false;
+              if (mPhraseAsTitle && alsoMatchCity) // Phrase is preset
+               added = true;
+           else if (!mPhraseAsTitle)
+               added = true;
+              return added;
+        }
         Bitmap getImgBasedOnUserFilter(Cursor cur) {
             boolean added = false;
             int dateRangeMatchFound = -1;
@@ -958,31 +965,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                        added = false;
                    }
                 }
-                if (mUserFilter.toLowerCase().contains(mLastWeekEndFilter.toLowerCase())) {
-                    mRangeMgr.printDateAndTime(mCalendar);
-
-                    if ((dateinMilliSec >= mLastWeekEnd.first) && (dateinMilliSec <= mTodayPair.second)) {
-                      if (DEBUG) Log.d(TAG, "****** Added ********* ");
-                      mRangeMgr.printDateAndTime(mCalendar);
-                      if (DEBUG) Log.d(TAG, "****** Added ********* ");
-                      added = true;// addtoListIfNotFound(path);
-                      dateRangeMatchFound= 0;
-                    } else {
-                        dateRangeMatchFound= 1;
-                        added = false; //!removeFromList(path);
-                    }
-                }
-                if (mUserFilter.toLowerCase().contains(mTodayFilter.toLowerCase())) {
-                    mRangeMgr.printDateAndTime(mCalendar);
-
-                    if ((dateinMilliSec >= mTodayPair.first) && (dateinMilliSec <= mTodayPair.second)) {
-                        dateRangeMatchFound= 0;
-                      added = true; // addtoListIfNotFound(path);
-                    } else {
-                        dateRangeMatchFound= 1;
-                        added = false; //!removeFromList(path);
-                    }
-                }
                 // Following block to 'enable / disable search by places'
                 // TBD All of the parse logic should eventually be wrapped into UserFileterAnalyzer
                 if (mSupportGeoCoder) { // && (mUserFilter.toLowerCase().contains(mPlaceFilter.toLowerCase()))) {
@@ -997,8 +979,8 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
                    boolean alsoMatchCity = false;
                    if (mUserFilterContainsAPLACES != null && mUserFilterContainsAPLACES.size() > 0 && 
-                   mDbHelper.isAtleastSingleValuePresentInList(mUserFilterContainsAPLACES)) {
-                       alsoMatchCity = (UserFilterAnalyzer.MATCH_STATE_DATES_AND_PLACE_EXACT == matchState);
+                       mDbHelper.isAtleastSingleValuePresentInList(mUserFilterContainsAPLACES)) {
+                       alsoMatchCity = (UserFilterAnalyzer.MATCH_STATE_DATES_AND_PLACE_EXACT == matchState) || (UserFilterAnalyzer.MATCH_STATE_PHRASE_AND_PLACE_EXACT == matchState);
                        if (added && alsoMatchCity) {
                            added = false;
                        }
@@ -1028,7 +1010,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                        // Try to read from Cache / db
 
                        do {
-                           placeList = mDbHelper.getPlace(currentId);
+                               placeList = mDbHelper.getPlace(currentId);
                                if (placeList == null || placeList.size() == 0) {
                                    break;
                                }
@@ -1065,7 +1047,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                                mPlaceList.add(adminAreaFound.toUpperCase());
                                mUpdateSubTitleRequired |= IsAdminArea;
                            }
-                           alsoMatchCity = (UserFilterAnalyzer.MATCH_STATE_DATES_AND_PLACE_EXACT == matchState);
+                           alsoMatchCity = (UserFilterAnalyzer.MATCH_STATE_DATES_AND_PLACE_EXACT == matchState) || (UserFilterAnalyzer.MATCH_STATE_PHRASE_AND_PLACE_EXACT == matchState);
                            if (dateRangeMatchFound != -1) {
                                // DateRange has been set
                                if ((dateRangeMatchFound == 0) && (alsoMatchCity)) {
@@ -1076,11 +1058,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                                    added = false;
                                } else {
                                    // Match city flag is false, but city matches anyways
-                                   added = true;
+                                   added = true; //checkPhraseTitleBeforeAdding(alsoMatchCity) && (dateRangeMatchFound == 0);
                                }
                            } else {
                              // Date Range not set but Locality match succeed.
-                             added = true;
+                               added = true; //trycheckPhraseTitleBeforeAdding(alsoMatchCity) && (dateRangeMatchFound == 0);
                            }
                            if (mUpdateSubTitleRequired != 0) {
                                runOnUiThread(new Runnable() {
@@ -1101,9 +1083,9 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                            // have intelligence to treat this as a place. So all pictures in Jan will
                            // show up anyways ??? Not really I guess
                            if ((matchState == UserFilterAnalyzer.MATCH_STATE_DATES_AND_UNKNOWN_PLACE_EXACT) && added)
-                           added = false;  // Some unknown place was asked to match.. Sorry User!
-                               break;
-                           }
+                               added = false;  // Some unknown place was asked to match.. Sorry User!
+                           break;
+                       }
                    } else {
                        if ((matchState == UserFilterAnalyzer.MATCH_STATE_DATES_AND_UNKNOWN_PLACE_EXACT) && added)
                            added = false;  // Some unknown place was asked to match.. Sorry User!
@@ -1155,7 +1137,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                        mDbHelper.updateRow(currentId, locality, country, adminArea);
                    }
                    if ((locality != null) && (0 == mAnalyzer.compareUserFilterForCity(locality))) {
-                       alsoMatchCity = (UserFilterAnalyzer.MATCH_STATE_DATES_AND_PLACE_EXACT == matchState);
+                       alsoMatchCity = (UserFilterAnalyzer.MATCH_STATE_DATES_AND_PLACE_EXACT == matchState) || (UserFilterAnalyzer.MATCH_STATE_PHRASE_AND_PLACE_EXACT == matchState);
                      // At this point, 'locality' / 'city' is matched.
                      // check 'dateRangeMatchFound' has been set or not
 
@@ -1172,11 +1154,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                              added = false;
                          } else {
                              // Match city flag is false, but city matches anyways
-                             added = true;
+                             added = true;//checkPhraseTitleBeforeAdding(alsoMatchCity) && (dateRangeMatchFound == 0);
                          }
                      } else {
                        // Date Range not set but Locality match succeed.
-                       added = true;
+                         added = true; //checkPhraseTitleBeforeAdding(alsoMatchCity) && (dateRangeMatchFound == 0);
                      }
                    } else {
                        // This check is important, because if pic is already added as a result of previous 'filter match'
