@@ -14,6 +14,7 @@ import android.util.Log;
 
 public class GeoDecoder {
 private boolean valid = false;
+private String TAG = "SpikIt> GeoDecoder";
 Float Latitude, Longitude;
 public GeoDecoder(ExifInterface exif){
  String attrLATITUDE = exif.getAttribute(ExifInterface.TAG_GPS_LATITUDE);
@@ -111,7 +112,7 @@ Geocoder geocoder;
 	String city = addresses.get(0).getAddressLine(1);
 	String country = addresses.get(0).getAddressLine(2);
 	String local = addresses.get(0).getLocality();
-	Log.i("address : " , address + " - " + city + " - " + country + " - " + local);
+	Log.i(TAG , address + " - " + city + " - " + country + " - " + local);
 } catch (IOException e) {
 	// TODO Auto-generated catch block
 	e.printStackTrace();
@@ -132,8 +133,9 @@ Geocoder geocoder;
 	completeAdress += addresses.get(0).getAddressLine(1) + " -  ";
 	completeAdress += addresses.get(0).getAddressLine(2) + " -  ";
 	completeAdress +=addresses.get(0).getLocality();
-	Log.i("address : " , completeAdress);
+	Log.i(TAG , completeAdress);
 } catch (IOException e) {
+	Log.i(TAG , "Exception occured while getting address");
 	// TODO Auto-generated catch block
 	e.printStackTrace();
 }

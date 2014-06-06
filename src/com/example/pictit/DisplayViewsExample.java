@@ -61,7 +61,7 @@ import android.widget.Toast;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ViewSwitcher;
 public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cursor>, LogUtils {
-    private String TAG = "Pickit/DisplayView";
+    private String TAG = "SpikIt> DisplayView";
     // CPU & connectivity data intensive operation guarded by this flag
     private boolean mSupportGeoCoder = true;
 
@@ -256,7 +256,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     private void updateTitle(String title) {
         String phrase = mAnalyzer.getPhraseIfExistsInUserFilter();
         if (phrase != null) {
-            phrase = phrase.toUpperCase() + " : PICTURES " + title;
+            phrase = phrase.toUpperCase() + " : " + title;
           title = phrase;
         }
         mActBar.setTitle(title);
@@ -821,7 +821,8 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                     return null;
                 Bitmap bmp = getImgBasedOnUserFilter(mCursor);
                 if (bmp != null) {
-                  publishProgress(bmp);
+                    //for (int i = 0; i < 50; i++)
+                        publishProgress(bmp);
                 }
             } while (!mCursor.isClosed() && mCursor.moveToPrevious() && !isCancelled());
             mCursor.close();
@@ -883,19 +884,9 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             float dpWidth  = mOutMetrics.widthPixels / mDensity;
             int width=(int) (dpWidth);
             int height=(int) (dpHeight);
-            int numOfColumns = -1;
-            //String dateString = intf.getAttribute(ExifInterface.TAG_DATETIME);
-            //if (DEBUG && (null != dateString)) Log.d(TAG, dateString);
             if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE ) {
-                numOfColumns = 3;
                 width = height;
-            } else {
-                numOfColumns = 2;
             }
-            // TBD : This needs to be changed
-            mDisplayImages.setNumColumns(numOfColumns);
-
-
             if (intf.hasThumbnail() ) {
                byte[] thumbnail = intf.getThumbnail();
                //LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -904,6 +895,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                    newBitmap = Bitmap.createScaledBitmap(bitmap, width, width, true);
                    if (newBitmap!= bitmap){
                        bitmap.recycle();
+                       bitmap = null;
                    }
                    if (newBitmap != null) {
                        return newBitmap;
@@ -919,6 +911,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                        newBitmap = Bitmap.createScaledBitmap(bitmap, width, width, true);
                        if (newBitmap!= bitmap){
                            bitmap.recycle();
+                           bitmap = null;
                        }
                        if (newBitmap != null) {
                            return newBitmap;
@@ -930,6 +923,44 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
              }
             return null;
         }
+
+    private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
+        // Raw height and width of image
+        final int height = options.outHeight;
+        final int width = options.outWidth;
+        int inSampleSize = 1;
+
+        if (height > reqHeight || width > reqWidth) {
+
+            final int halfHeight = height / 2;
+            final int halfWidth = width / 2;
+
+            // Calculate the largest inSampleSize value that is a power of 2 and keeps both
+            // height and width larger than the requested height and width.
+            while ((halfHeight / inSampleSize) > reqHeight
+                    && (halfWidth / inSampleSize) > reqWidth) {
+                inSampleSize *= 2;
+            }
+        }
+
+        return inSampleSize;
+    }
+
+        /*private Bitmap decodeSampledBitmapFromResource(int resId,
+                int reqWidth, int reqHeight) {
+
+            // First decode with inJustDecodeBounds=true to check dimensions
+            final BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            BitmapFactory.decode(res, resId, options);
+
+            // Calculate inSampleSize
+            options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
+
+            // Decode bitmap with inSampleSize set
+            options.inJustDecodeBounds = false;
+            return BitmapFactory.decodeResource(res, resId, options);
+        }*/
 
         private boolean checkPhraseTitleBeforeAdding(boolean alsoMatchCity) {
            boolean added = false;
@@ -978,7 +1009,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                    }
 
                    boolean alsoMatchCity = false;
-                   if (mUserFilterContainsAPLACES != null && mUserFilterContainsAPLACES.size() > 0 && 
+                   if (mUserFilterContainsAPLACES != null && mUserFilterContainsAPLACES.size() > 0 &&
                        mDbHelper.isAtleastSingleValuePresentInList(mUserFilterContainsAPLACES)) {
                        alsoMatchCity = (UserFilterAnalyzer.MATCH_STATE_DATES_AND_PLACE_EXACT == matchState) || (UserFilterAnalyzer.MATCH_STATE_PHRASE_AND_PLACE_EXACT == matchState);
                        if (added && alsoMatchCity) {
@@ -1187,7 +1218,13 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                         }
                     });
                 }
-                return getPicture(path);
+                try {
+                    return getPicture(path);
+                } catch (OutOfMemoryError e) {
+                    Log.e("Map", "DisplayView - Out Of Memory Error " + e.getLocalizedMessage());
+                    //System.gc();
+                }
+
             }
             return null;
         } // End of function

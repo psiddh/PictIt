@@ -48,8 +48,15 @@
         <service android:enabled="true" android:name=".FileTransferService" />
          <service android:enabled="true" android:name=".SyncIntentService"></service>
 
-
+		<receiver android:name="NetworkChangeReceiver"
+		    android:enabled="true" android:label="NetworkChangeReceiver">
+		    <intent-filter>
+		        <action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
+		    </intent-filter>
+		</receiver>
     </application>
+
+
 
 
 </manifest>

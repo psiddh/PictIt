@@ -50,6 +50,7 @@ public class MainActivity extends Activity {
     private ProgressBar mProgress;
     private EditText mEditText;
     ImageButton mImgButton = null;
+    private String TAG = "SpikIt> MainView";
 
     private Handler mTextSwictherHandler = new Handler() {
         public void handleMessage (Message msg) {
@@ -423,8 +424,8 @@ public class MainActivity extends Activity {
         }
 
         String dateString = intf.getAttribute(ExifInterface.TAG_DATETIME);
-           Log.d("PATH : ", path);
-           Log.d("dateString : ", dateString);
+           Log.d(TAG, path);
+           Log.d(TAG, dateString);
            if (intf.hasThumbnail()) {
                byte[] thumbnail = intf.getThumbnail();
                LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);

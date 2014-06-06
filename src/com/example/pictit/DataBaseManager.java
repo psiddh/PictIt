@@ -20,7 +20,7 @@ import android.util.Log;
 
 public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
 
-  private static String TAG = "DataBaseManager";
+  private static String TAG = "SpikIt> DataBaseManager";
   public static final String TABLE_GALLERY = "gallery";
   public static final String COLUMN_ID = "_id";
   public static final String PICTURE_ID = "pict_id";
@@ -190,9 +190,13 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
       }
 
       private void performSync(Cursor cur) {
-      opendb();
-      if (null == mConnectivityManager)
-          mConnectivityManager =  (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+          boolean isInCompleteFlg = false;
+          if (state == SyncState.SYNC_STATE_INPROGRESS) {
+              return;
+          }
+          opendb();
+          if (null == mConnectivityManager)
+              mConnectivityManager =  (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
           do {
               state = SyncState.SYNC_STATE_INPROGRESS;
               if (cur.isClosed()) break;
@@ -213,11 +217,13 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
               if (DEBUG) Log.d(TAG, "Read from Database ... id : " + id + "  DB Count : " + countRowsinDB());
               // Before we try to retrieve from Internet, check to see if there is active connection
               if ((mConnectivityManager.getActiveNetworkInfo() == null) ||
-                     !(mConnectivityManager.getActiveNetworkInfo().isConnectedOrConnecting())) {
-                     // mConnectivityManager.getActiveNetworkInfo() being null happens in airplane mode I guess
+                   !(mConnectivityManager.getActiveNetworkInfo().isConnectedOrConnecting())) {
+                  // mConnectivityManager.getActiveNetworkInfo() being null happens in airplane mode I guess
                   Log.d(TAG,"Ooops No Connection.. Try Later");
-                 continue;
+                  isInCompleteFlg = true;
+                  continue;
               }
+
               List<Address> address;
               String place = null;
               String country = null;
@@ -229,9 +235,12 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
                           // This image doesn't not have valid lat / long associated to it
                           continue;
                       }
+                      if (DEBUG) Log.d(TAG, "Valid GeoCoder co-oridnates : " + id);
+
                       address = geoDecoder.getAddress(mContext);
                       if ((address!= null && address.size() > 0) && (address.get(0) != null)) {
-                    placeFound = new  ArrayList<String> ();
+                        if (DEBUG) Log.d(TAG, "Valid Address obtained : " + id);
+                        placeFound = new  ArrayList<String> ();
                         // Fetched successfully from Internet
                         place = address.get(0).getLocality();
                         if (place != null)
@@ -253,10 +262,14 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
                       mMapCache.put(id, placeFound);
               } catch (IOException e) {
                       // TODO Auto-generated catch block
+                        isInCompleteFlg = true;
                       e.printStackTrace();
               }
           } while (!cur.isClosed() && cur.moveToNext());
-          state = SyncState.SYNC_STATE_COMPLETED;
+          if (state == SyncState.SYNC_STATE_INPROGRESS && !isInCompleteFlg)
+              state = SyncState.SYNC_STATE_COMPLETED;
+          else
+              state = SyncState.SYNC_STATE_INCOMPLETE;
           cur.close();
           closedb();
           /*if (TEST_DB_INITIAL_CREATION_AND_CACHE_UPDATE_FOR_PLACE) {
@@ -289,6 +302,10 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
       }
 
       public void startSync() {
+          if (state == SyncState.SYNC_STATE_INPROGRESS) {
+              Log.d(TAG,"SYNC ALREADY IN PROGRESS. DO NOT PERFOMR SYNC ANOTHER TIME");
+              return;
+          }
           // which image properties are we querying
           String[] projection = new String[]{
                   MediaStore.Images.Media._ID,
@@ -333,18 +350,18 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
       }
 
       public boolean isRowFound(int id, String place) {
-      ArrayList<String> placesFound = mMapCache.get(id);
-      if (!isAtleastSingleValuePresentInList(placesFound))
-      return false;
-      return isValueFoundInList(placesFound, place);
+          ArrayList<String> placesFound = mMapCache.get(id);
+          if (!isAtleastSingleValuePresentInList(placesFound))
+              return false;
+          return isValueFoundInList(placesFound, place);
       }
 
       public void updateRow(int id, String place, String country, String admin) {
-      ArrayList<String> placesFound = mMapCache.get(id);
+          ArrayList<String> placesFound = mMapCache.get(id);
           if (null != placesFound ) {
               return;
           }
-          if (isAtleastSingleValuePresentInList(placesFound))
+          if (!isAtleastSingleValuePresentInList(placesFound))
               return;
           mMapCache.put(id, placesFound);
           opendb();
@@ -395,19 +412,19 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
       boolean found = false;
 
           for (ArrayList<String> places : mMapCache.values()) {
-          if ((places == null) || (places.size() == 0))
-          continue;
-          placeFound.clear();
-          found = false;
-          if (places.size() > 0) {
-              place = places.get(INDEX_PLACE);
-          }
-          if (places.size() > 1) {
-              country = places.get(INDEX_COUNTRY);
-          }
-          if (places.size() > 2) {
-              admin = places.get(INDEX_ADMIN);
-          }
+              if ((places == null) || (places.size() == 0))
+              continue;
+              placeFound.clear();
+              found = false;
+              if (places.size() > 0) {
+                  place = places.get(INDEX_PLACE);
+              }
+              if (places.size() > 1) {
+                  country = places.get(INDEX_COUNTRY);
+              }
+              if (places.size() > 2) {
+                  admin = places.get(INDEX_ADMIN);
+              }
               if((place != null) && userFilter.toLowerCase().contains(place.toLowerCase())) {
                   found = true;
                   placeFound.add(place);
@@ -451,7 +468,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
           if (values.get(INDEX_PLACE) == "" &&
           values.get(INDEX_COUNTRY) == "" &&
           values.get(INDEX_ADMIN) == "" ) {
-          return  false;
+              return  false;
           }
           String place = values.get(INDEX_PLACE);
           String country = values.get(INDEX_COUNTRY);
@@ -459,8 +476,8 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
           if (((place != null) && place.equalsIgnoreCase(found)) ||
           ((country != null) && place.equalsIgnoreCase(country)) ||
           ((admin != null) && place.equalsIgnoreCase(admin))) {
-          return true;
-          }
+              return true;
+              }
           }
           return false;
       }

@@ -17,7 +17,7 @@ import android.util.Pair;
 
 public class UserFilterAnalyzer implements LogUtils{
 
-    private String TAG = "pickit/UserFilterAnalyzer";
+    private String TAG = "SpikIt> UserFilterAnalyzer";
 
     private int   SINGLE_DAY_OFFSET_IN_MS = 86400000;
 
@@ -46,23 +46,23 @@ public class UserFilterAnalyzer implements LogUtils{
     private static final int KEYWORD_CONNECTOR_TO = 10;
     private static final int KEYWORD_UNKNOWN = 0xFF;
 
-    private static final int PHRASE_TODAY = 1;
-    private static final int PHRASE_LAST_COUPLE_OF_DAYS = 2;
-    private static final int PHRASE_LAST_COUPLE_OF_WEEKS = 3;
-    private static final int PHRASE_LAST_COUPLE_OF_MONTHS = 4;
-    private static final int PHRASE_LAST_WEEKEND = 5;
-    private static final int PHRASE_LAST_WEEK = 6;
-    private static final int PHRASE_THIS_WEEK = 7;
-    private static final int PHRASE_LAST_MONTH = 8;
-    private static final int PHRASE_THIS_MONTH = 9;
-    private static final int PHRASE_CHRISTMAS = 10;
-    private static final int PHRASE_CHRISTMAS_EVE = 11;
-    private static final int PHRASE_BOXING_DAY = 12;
-    private static final int PHRASE_NEWYEAR = 13;
-    private static final int PHRASE_NEWYEARS_EVE = 14;
-    private static final int PHRASE_CHRISTMAS_AND_NEWYEAR = 15;
-    private static final int PHRASE_THANKSGIVING = 16;
-    private static final int PHRASE_JULY_4TH = 17;
+    public static final int PHRASE_TODAY = 1;
+    public static final int PHRASE_LAST_COUPLE_OF_DAYS = 2;
+    public static final int PHRASE_LAST_COUPLE_OF_WEEKS = 3;
+    public static final int PHRASE_LAST_COUPLE_OF_MONTHS = 4;
+    public static final int PHRASE_LAST_WEEKEND = 5;
+    public static final int PHRASE_LAST_WEEK = 6;
+    public static final int PHRASE_THIS_WEEK = 7;
+    public static final int PHRASE_LAST_MONTH = 8;
+    public static final int PHRASE_THIS_MONTH = 9;
+    public static final int PHRASE_CHRISTMAS = 10;
+    public static final int PHRASE_CHRISTMAS_EVE = 11;
+    public static final int PHRASE_BOXING_DAY = 12;
+    public static final int PHRASE_NEWYEAR = 13;
+    public static final int PHRASE_NEWYEARS_EVE = 14;
+    //public static final int PHRASE_CHRISTMAS_AND_NEWYEAR = 15;
+    public static final int PHRASE_THANKSGIVING = 16;
+    public static final int PHRASE_JULY_4TH = 17;
 
     private int mDateStartIndex = -1;
     private int mDateEndIndex = -1;
@@ -183,12 +183,19 @@ public class UserFilterAnalyzer implements LogUtils{
         mDateRangeKeyWord.put("2008",new Integer[] {KEYWORD_YEAR, 2008});
         mDateRangeKeyWord.put("2009",new Integer[] {KEYWORD_YEAR, 2009});
         mDateRangeKeyWord.put("2010",new Integer[] {KEYWORD_YEAR, 2010});
+        mDateRangeKeyWord.put("10",new Integer[] {KEYWORD_YEAR, 2010});
         mDateRangeKeyWord.put("2011",new Integer[] {KEYWORD_YEAR, 2011});
+        mDateRangeKeyWord.put("11",new Integer[] {KEYWORD_YEAR, 2011});
         mDateRangeKeyWord.put("2012",new Integer[] {KEYWORD_YEAR, 2012});
+        mDateRangeKeyWord.put("12",new Integer[] {KEYWORD_YEAR, 2012});
         mDateRangeKeyWord.put("2013",new Integer[] {KEYWORD_YEAR, 2013});
+        mDateRangeKeyWord.put("13",new Integer[] {KEYWORD_YEAR, 2013});
         mDateRangeKeyWord.put("2014",new Integer[] {KEYWORD_YEAR, 2014});
+        mDateRangeKeyWord.put("14",new Integer[] {KEYWORD_YEAR, 2014});
         mDateRangeKeyWord.put("2015",new Integer[] {KEYWORD_YEAR, 2015});
+        mDateRangeKeyWord.put("15",new Integer[] {KEYWORD_YEAR, 2015});
         mDateRangeKeyWord.put("2016",new Integer[] {KEYWORD_YEAR, 2016});
+        mDateRangeKeyWord.put("16",new Integer[] {KEYWORD_YEAR, 2016});
         mDateRangeKeyWord.put("2017",new Integer[] {KEYWORD_YEAR, 2017});
         mDateRangeKeyWord.put("2018",new Integer[] {KEYWORD_YEAR, 2018});
         mDateRangeKeyWord.put("2019",new Integer[] {KEYWORD_YEAR, 2009});
@@ -230,8 +237,8 @@ public class UserFilterAnalyzer implements LogUtils{
         mDateRangeKeyWord.put("new year",new Integer[] {KEYWORD_PHRASES, PHRASE_NEWYEAR});
         mDateRangeKeyWord.put("new years eve",new Integer[] {KEYWORD_PHRASES, PHRASE_NEWYEARS_EVE});
         mDateRangeKeyWord.put("new year eve",new Integer[] {KEYWORD_PHRASES, PHRASE_NEWYEARS_EVE});
-        mDateRangeKeyWord.put("christmas and new year",new Integer[] {KEYWORD_PHRASES, PHRASE_CHRISTMAS_AND_NEWYEAR});
-        mDateRangeKeyWord.put("thanksgiving",new Integer[] {KEYWORD_PHRASES, PHRASE_THANKSGIVING});
+        //mDateRangeKeyWord.put("christmas and new year",new Integer[] {KEYWORD_PHRASES, PHRASE_CHRISTMAS_AND_NEWYEAR});
+        //mDateRangeKeyWord.put("thanksgiving",new Integer[] {KEYWORD_PHRASES, PHRASE_THANKSGIVING});
         mDateRangeKeyWord.put("4th of July",new Integer[] {KEYWORD_PHRASES, PHRASE_JULY_4TH});
 
         // Connector key words
@@ -246,6 +253,9 @@ public class UserFilterAnalyzer implements LogUtils{
             for (int i = 0; i < mWords.length; i++) {
               Log.d(TAG, "Word "+ i+1 + " :" + mWords[i]);
             }
+        }
+        for (int i = 0; i < mWords.length; i++) {
+            mWords[i]= mWords[i].replace(" +", " ");
         }
         initKeyWords();
         mContext = context;
@@ -520,6 +530,22 @@ public class UserFilterAnalyzer implements LogUtils{
            if (vals[0] == KEYWORD_PHRASES) {
                String phrase = entry.getKey();
                if (mUserFilter.toLowerCase().contains(phrase.toLowerCase())) {
+                   if (vals[1] == PHRASE_LAST_WEEK) {
+                       if (mUserFilter.toLowerCase().contains("last weekend")) {
+                           return PHRASE_LAST_WEEKEND;
+                       }
+                   }
+
+                   if (vals[1] == PHRASE_CHRISTMAS) {
+                       /*if (mUserFilter.toLowerCase().contains("christmas and new year")) {
+                           return PHRASE_CHRISTMAS_AND_NEWYEAR;
+                       }*/
+
+                       if (mUserFilter.toLowerCase().contains("christmas eve")) {
+                           return PHRASE_CHRISTMAS_EVE;
+                       }
+                   }
+
                    return vals[1];
                }
            }
@@ -536,9 +562,20 @@ public class UserFilterAnalyzer implements LogUtils{
                String phrase = entry.getKey();
                if (mUserFilter.toLowerCase().contains(phrase.toLowerCase())) {
                    // Dirty as hell! Live with this for now!
+
                    if (vals[1] == PHRASE_LAST_WEEK) {
                        if (mUserFilter.toLowerCase().contains("last weekend")) {
                            return "last weekend";
+                       }
+                   }
+
+                   if (vals[1] == PHRASE_CHRISTMAS) {
+                       /*if (mUserFilter.toLowerCase().contains("christmas and new year")) {
+                           return "christmas and new year";
+                       }*/
+
+                       if (mUserFilter.toLowerCase().contains("christmas eve")) {
+                           return "christmas eve";
                        }
                    }
                    return phrase;
@@ -554,24 +591,27 @@ public class UserFilterAnalyzer implements LogUtils{
             case PHRASE_TODAY :
                 return mRangeMgr.getToday();
             case PHRASE_LAST_COUPLE_OF_DAYS :
-                break;
             case PHRASE_LAST_COUPLE_OF_WEEKS :
             case PHRASE_LAST_COUPLE_OF_MONTHS :
-                break;
+                return mRangeMgr.getLastCouple(phraseId);
             case PHRASE_LAST_WEEKEND :
                 return mRangeMgr.getLastWeekEnd();
             case PHRASE_LAST_WEEK :
+                return mRangeMgr.getLastWeek();
             case PHRASE_THIS_WEEK :
+                return mRangeMgr.getThisWeek();
             case PHRASE_LAST_MONTH :
+                return mRangeMgr.getLastMonth();
             case PHRASE_THIS_MONTH :
+                return mRangeMgr.getThisMonth();
             case PHRASE_CHRISTMAS :
             case PHRASE_CHRISTMAS_EVE :
             case PHRASE_BOXING_DAY :
             case PHRASE_NEWYEAR :
             case PHRASE_NEWYEARS_EVE :
-            case PHRASE_CHRISTMAS_AND_NEWYEAR :
-            case PHRASE_THANKSGIVING :
             case PHRASE_JULY_4TH :
+                return mRangeMgr.getPharse(phraseId);
+            case PHRASE_THANKSGIVING :
                 break;
             default:
                 break;
