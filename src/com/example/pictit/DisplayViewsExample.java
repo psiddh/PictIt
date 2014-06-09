@@ -15,13 +15,13 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.CursorLoader;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.Loader;
 import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
 import android.location.Address;
 import android.media.ExifInterface;
 import android.net.ConnectivityManager;
@@ -34,13 +34,13 @@ import android.os.Message;
 import android.provider.MediaStore;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.LruCache;
 import android.util.Pair;
 import android.util.SparseBooleanArray;
 import android.view.ActionMode;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.Display;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -50,7 +50,6 @@ import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.BaseAdapter;
-import android.widget.CheckBox;
 import android.widget.Checkable;
 import android.widget.FrameLayout;
 import android.widget.GridView;
@@ -60,6 +59,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ViewSwitcher;
+import android.app.ActivityManager;
 public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cursor>, LogUtils {
     private String TAG = "SpikIt> DisplayView";
     // CPU & connectivity data intensive operation guarded by this flag
@@ -104,6 +104,13 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
     ArrayList<Uri> mImageUris = new ArrayList<Uri>();
     ArrayList<String> mList = new ArrayList<String>();
+
+    private ArrayList<Bitmap> photos = new ArrayList<Bitmap>();
+
+    int memClass = 0;//((ActivityManager) this.getSystemService( Context.ACTIVITY_SERVICE )).getMemoryClass();
+    int cacheSize = 0; //1024 * 1024 * memClass / 8;
+
+    private LruCache<String, BitmapDrawable> mMemoryCache = null ; //new LruCache<String, Bitmap>(cacheSize) {
 
     /**
      * Grid view holding the images.
@@ -156,6 +163,22 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             }
      };
 
+     public static int getBitmapSize(BitmapDrawable value) {
+         Bitmap bitmap = value.getBitmap();
+
+         // From KitKat onward use getAllocationByteCount() as allocated bytes can potentially be
+         // larger than bitmap byte count.
+         if (Utils.hasKitKat() &&  bitmap != null && !bitmap.isRecycled()) {
+             return bitmap.getAllocationByteCount();
+         }
+
+         if (Utils.hasHoneycombMR1()) {
+             return bitmap.getByteCount();
+         }
+
+         // Pre HC-MR1
+         return bitmap.getRowBytes() * bitmap.getHeight();
+     }
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -164,6 +187,25 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         getLoaderManager().initLoader(0, null, this);
         mActBar = getActionBar();
 
+        memClass = ((ActivityManager) this.getSystemService( Context.ACTIVITY_SERVICE )).getMemoryClass();
+        cacheSize = 1024 * 1024 * memClass / 8;
+
+        mMemoryCache = new LruCache<String, BitmapDrawable>(cacheSize) {
+            protected int sizeOf(String key, BitmapDrawable value) {
+                final int bitmapSize = getBitmapSize(value) / 1024;
+                return bitmapSize == 0 ? 1 : bitmapSize;
+            }
+
+
+            protected void entryRemoved( boolean evicted, String key, BitmapDrawable oldValue, BitmapDrawable newValue ) {
+                if (RecyclingBitmapDrawable.class.isInstance(oldValue)) {
+                    // The removed entry is a recycling drawable, so notify it
+                    // that it has been removed from the memory cache
+                    ((RecyclingBitmapDrawable) oldValue).setIsCached(false, 1);
+                }
+              }
+
+        };
         Intent intent = getIntent();
         String filter = intent.getExtras().getString("filter");
         mUserFilter = filter;
@@ -304,6 +346,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
        if (!mLoadImagesInBackground.isCancelled()) {
            mLoadImagesInBackground.cancel(true);
        }
+       //mImageAdapter.clearCache();
        super.onDestroy();
     }
 
@@ -634,23 +677,46 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             }
         }
     }
-
-    class ViewHolder {
-        ImageView imageview;
-        CheckBox checkbox;
-        int id;
-    }
     /**
      * Adapter for our image files.
      *
      */
     class GridImageAdapter extends BaseAdapter {
         private Context mContext;
-        private LayoutInflater mInflater;
-        private ArrayList<Bitmap> photos = new ArrayList<Bitmap>();
+        public void addBitmapToCache(String data, BitmapDrawable value) {
+            //BEGIN_INCLUDE(add_bitmap_to_cache)
+            if (data == null || value == null) {
+                return;
+            }
+
+            // Add to memory cache
+            if (mMemoryCache != null) {
+                if (RecyclingBitmapDrawable.class.isInstance(value)) {
+                    // The removed entry is a recycling drawable, so notify it
+                    // that it has been added into the memory cache
+                    ((RecyclingBitmapDrawable) value).setIsCached(true, 0);
+                }
+                mMemoryCache.put(data, value);
+            }
+        }
+
+        public BitmapDrawable getBitmapFromMemCache(String data) {
+            BitmapDrawable memValue = null;
+            if (mMemoryCache != null) {
+                memValue = mMemoryCache.get(data);
+            }
+
+            return memValue;
+        }
+
+        public void clearCache() {
+            if (mMemoryCache != null) {
+                mMemoryCache.evictAll();
+                Log.d(TAG, "Memory cache cleared");
+            }
+        }
 
         public GridImageAdapter(Context context) {
-            mInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
             mContext = context;
         }
 
@@ -658,13 +724,22 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             photos.add(photo);
         }
 
+        public void addLRUPhoto(Bitmap photo) {
+            int val = mMemoryCache.putCount();
+            BitmapDrawable drawable = null;
+            drawable = new RecyclingBitmapDrawable(getResources(), photo);
+            addBitmapToCache(val+"", drawable);
+        }
+
         public int getCount() {
             // TBD: Need to check this ?
-            return photos.size();
+            //return photos.size();
+            return mMemoryCache.putCount();
         }
 
         public Object getItem(int position) {
-            return photos.get(position);
+            //return photos.get(position);
+            return mMemoryCache.get(position+"");
         }
 
         public long getItemId(int position) {
@@ -676,94 +751,22 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             CheckableLayout l;
             if (convertView == null) {
                 l = new CheckableLayout(mContext);
-                imageView = new ImageView(mContext);
+                imageView = new RecyclingImageView(mContext);
+                imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                //imageView = new ImageView(mContext);
                 l.addView(imageView);
             } else {
                 l = (CheckableLayout) convertView;
-                imageView = (ImageView) l.getChildAt(0);
+                imageView = (RecyclingImageView) l.getChildAt(0);
             }
-            imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            int orientation = getResources().getConfiguration().orientation;
-            int left =4,top = 4,right =4,bottom = 4;
-            if (orientation == 0x02) {
-               right = left = 4;
-            } else {
-               top = bottom = 4;
+
+            if (mImageAdapter != null) {
+                BitmapDrawable drawable = mImageAdapter.getBitmapFromMemCache(position+"");
+                imageView.setImageDrawable(drawable);
+                imageView.setPadding(4, 4, 4, 4);
             }
-            //imageView.setPadding(left,top,right,bottom);
-            imageView.setImageBitmap(photos.get(position));
-            imageView.setPadding(4, 4, 4, 4);
-            /*WindowManager wm = (WindowManager) mContext.getSystemService(Context.WINDOW_SERVICE);
-
-            Display display = wm.getDefaultDisplay();
-            DisplayMetrics outMetrics = new DisplayMetrics ();
-            display.getMetrics(outMetrics);
-            float density  = mContext.getResources().getDisplayMetrics().density;
-            float dpHeight = outMetrics.heightPixels / density;
-            float dpWidth  = outMetrics.widthPixels / density;
-
-            int width=(int) (dpWidth);
-            int height=(int) (dpHeight);
-
-            imageView.setLayoutParams(new GridView.LayoutParams(width,height));
-            imageView.setBackgroundColor(000000);
-            imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            imageView.setImageBitmap(photos.get(position));*/
             return l;
         }
-        /*public View getView(int position, View convertView, ViewGroup parent) {
-            ViewHolder holder = new ViewHolder();
-            if (convertView == null) {
-                convertView = mInflater.inflate(
-                        R.layout.galleryitem, null);
-                holder.imageview = (ImageView) convertView.findViewById(R.id.thumbImage);
-                holder.checkbox = (CheckBox) convertView.findViewById(R.id.itemCheckBox);
-
-                convertView.setTag(holder);
-            }
-            else {
-                holder = (ViewHolder) convertView.getTag();
-            }
-            holder.checkbox.setId(position);
-            holder.imageview.setId(position);
-            holder.checkbox.setOnClickListener(new OnClickListener() {
-
-                public void onClick(View v) {
-                    // TODO Auto-generated method stub
-                    //ViewHolder holder = (ViewHolder) v.getTag();
-                    SparseBooleanArray checked = mDisplayImages.getCheckedItemPositions();
-                    CheckBox cb = (CheckBox) v;
-                    int id = cb.getId();
-                    if (checked.get(id)){
-                        cb.setChecked(false);
-                        //thumbnailsselection[id] = false;
-                    } else {
-                        cb.setChecked(true);
-                        //thumbnailsselection[id] = true;
-                    }
-                }
-            });
-            holder.imageview.setOnClickListener(new OnClickListener() {
-
-                public void onClick(View v) {
-                    // TODO Auto-generated method stub
-                    int id = v.getId();
-                    Intent intent = new Intent();
-                    intent.setAction(Intent.ACTION_VIEW);
-                    Uri imageUri = Uri.parse("file://" + mList.get(0));
-                    intent.setDataAndType(imageUri, "image/*");
-                    startActivity(intent);
-                }
-            });
-            //holder.imageview.setLayoutParams(new GridView.LayoutParams(260, 260));
-            //holder.imageview.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            //holder.imageview.setPadding(4, 4, 4, 4);
-            holder.imageview.setImageBitmap(photos.get(position));
-            holder.imageview.setBackgroundColor(Color.TRANSPARENT);
-            holder.checkbox.setChecked(true);
-            holder.id = position;
-            return convertView;
-        }*/
     }
 
     /**
@@ -773,7 +776,8 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
      */
     private void addGridImage(Bitmap... value) {
         for (Bitmap image : value) {
-            mImageAdapter.addPhoto(image);
+            //mImageAdapter.addPhoto(image);
+            mImageAdapter.addLRUPhoto(image);
             mImageAdapter.notifyDataSetChanged();
         }
     }
@@ -962,14 +966,6 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             return BitmapFactory.decodeResource(res, resId, options);
         }*/
 
-        private boolean checkPhraseTitleBeforeAdding(boolean alsoMatchCity) {
-           boolean added = false;
-              if (mPhraseAsTitle && alsoMatchCity) // Phrase is preset
-               added = true;
-           else if (!mPhraseAsTitle)
-               added = true;
-              return added;
-        }
         Bitmap getImgBasedOnUserFilter(Cursor cur) {
             boolean added = false;
             int dateRangeMatchFound = -1;
@@ -1089,11 +1085,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                                    added = false;
                                } else {
                                    // Match city flag is false, but city matches anyways
-                                   added = true; //checkPhraseTitleBeforeAdding(alsoMatchCity) && (dateRangeMatchFound == 0);
+                                   added = true;
                                }
                            } else {
                              // Date Range not set but Locality match succeed.
-                               added = true; //trycheckPhraseTitleBeforeAdding(alsoMatchCity) && (dateRangeMatchFound == 0);
+                               added = true;
                            }
                            if (mUpdateSubTitleRequired != 0) {
                                runOnUiThread(new Runnable() {
@@ -1185,11 +1181,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                              added = false;
                          } else {
                              // Match city flag is false, but city matches anyways
-                             added = true;//checkPhraseTitleBeforeAdding(alsoMatchCity) && (dateRangeMatchFound == 0);
+                             added = true;
                          }
                      } else {
                        // Date Range not set but Locality match succeed.
-                         added = true; //checkPhraseTitleBeforeAdding(alsoMatchCity) && (dateRangeMatchFound == 0);
+                         added = true;
                      }
                    } else {
                        // This check is important, because if pic is already added as a result of previous 'filter match'
