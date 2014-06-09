@@ -11,7 +11,6 @@ import com.example.pictit.DataBaseManager.SyncState;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.LoaderManager.LoaderCallbacks;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.CursorLoader;
 import android.content.Intent;
@@ -201,7 +200,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 if (RecyclingBitmapDrawable.class.isInstance(oldValue)) {
                     // The removed entry is a recycling drawable, so notify it
                     // that it has been removed from the memory cache
-                    ((RecyclingBitmapDrawable) oldValue).setIsCached(false, 1);
+                    ((RecyclingBitmapDrawable) oldValue).setIsCached(false);
                 }
               }
 
@@ -352,14 +351,14 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
      // Our handler for received Intents. This will be called whenever an Intent
      // with an action named "custom-event-name" is broadcasted.
-     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
+     /*private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
        @Override
        public void onReceive(Context context, Intent intent) {
          // Get extra data included in the Intent
          String message = intent.getStringExtra("message");
          Log.d("receiver", "Got message: " + message);
        }
-     };
+     };*/
     /**
      * Setup the grid view.
      */
@@ -368,7 +367,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         DisplayMetrics metrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(metrics);
         mDisplayImages.setBackgroundColor(Color.DKGRAY);
-        mDisplayImages.setChoiceMode(mDisplayImages.CHOICE_MODE_MULTIPLE_MODAL);
+        mDisplayImages.setChoiceMode(GridView.CHOICE_MODE_MULTIPLE_MODAL);
         mDisplayImages.setMultiChoiceModeListener(new MultiChoiceModeListener());
         mDisplayImages.setDrawSelectorOnTop(true);
         //setupTextSwitcher();
@@ -381,7 +380,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         //mDisplayImages.setHorizontalSpacing(1);
         //mDisplayImages.setOnItemClickListener(DisplayViewsExample.this);
         mDisplayImages.setOnItemClickListener(new OnItemClickListener() {
-            public void onItemClick(AdapterView parent,
+            public void onItemClick(AdapterView<?> parent,
             View v, int position, long id)
             {
                 mClickStateOnGridItemAShortPress = true;
@@ -418,7 +417,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
     @Override
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
-        AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) menuInfo;
+        //AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) menuInfo;
 
         if(mClickStateOnGridItemAShortPress) {
             //getMenuInflater().inflate(R.menu.context_standard, menu);
@@ -694,7 +693,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 if (RecyclingBitmapDrawable.class.isInstance(value)) {
                     // The removed entry is a recycling drawable, so notify it
                     // that it has been added into the memory cache
-                    ((RecyclingBitmapDrawable) value).setIsCached(true, 0);
+                    ((RecyclingBitmapDrawable) value).setIsCached(true);
                 }
                 mMemoryCache.put(data, value);
             }
@@ -928,7 +927,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             return null;
         }
 
-    private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
+    /*private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
         // Raw height and width of image
         final int height = options.outHeight;
         final int width = options.outWidth;
@@ -948,7 +947,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         }
 
         return inSampleSize;
-    }
+    }*/
 
         /*private Bitmap decodeSampledBitmapFromResource(int resId,
                 int reqWidth, int reqHeight) {

@@ -39,9 +39,9 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
   static ConcurrentHashMap<Integer, ArrayList<String>> mMapCache = new ConcurrentHashMap<Integer, ArrayList<String>>();
 
   private int mId = -1;
-  private int mBucketColumn = 0;
-  private int mDateColumn = 0;
-  private int mTitleColumn = 0;
+  //private int mBucketColumn = 0;
+  //private int mDateColumn = 0;
+  //private int mTitleColumn = 0;
   private int mDataColumn = 0;
 
   private int INDEX_PLACE = 0;
@@ -77,7 +77,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
 
     private static final String COUNT_ROWS = "select * from " + TABLE_GALLERY;
 
-    private static final String GET_PLACES_UNIQUE = "select DISTINCT" + PICTURE_PLACE + " from " + TABLE_GALLERY;
+    //private static final String GET_PLACES_UNIQUE = "select DISTINCT" + PICTURE_PLACE + " from " + TABLE_GALLERY;
 
     /**
      * constructor should be private to prevent direct instantiation.
@@ -283,12 +283,12 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
           }*/
       }
 
-      private void deletedb() {
+      /*private void deletedb() {
           // This is only for testing purpose
           opendb();
           mDataBase.execSQL("DROP TABLE IF EXISTS " + TABLE_GALLERY);
           closedb();
-      }
+      }*/
 
       // **********  PUBLIC FUNCTIONS **********************
 
@@ -332,6 +332,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
           if (cur.moveToFirst()) {
               mId = cur.getColumnIndex(
                       MediaStore.Images.Media._ID);
+              /*
               mBucketColumn = cur.getColumnIndex(
                   MediaStore.Images.Media.BUCKET_DISPLAY_NAME);
 
@@ -339,7 +340,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
                   MediaStore.Images.Media.DATE_TAKEN);
 
               mTitleColumn = cur.getColumnIndex(
-                      MediaStore.Images.Media.TITLE);
+                      MediaStore.Images.Media.TITLE);*/
 
               mDataColumn = cur.getColumnIndex(
                       MediaStore.Images.Media.DATA);
@@ -387,7 +388,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
       }
 
       public void setState(SyncState state) {
-          this.state = state;
+          DataBaseManager.state = state;
       }
 
       public String retreivePlaceFromStringIfExists(String userFilter) {

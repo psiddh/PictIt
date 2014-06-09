@@ -35,8 +35,8 @@ public class UserFilterAnalyzer implements LogUtils{
     Map<String, Integer> mDateRangeConnectorKeyword = new HashMap<String, Integer>();
 
     private static final int KEYWORD_MONTH_NAME = 1;
-    private static final int KEYWORD_WEEKEND = 2;
-    private static final int KEYWORD_MONTH = 3;
+    //private static final int KEYWORD_WEEKEND = 2;
+    //private static final int KEYWORD_MONTH = 3;
     private static final int KEYWORD_MONTH_DAYS = 4;
     private static final int KEYWORD_YEAR = 5;
     private static final int KEYWORD_TODAY = 6;
@@ -44,7 +44,7 @@ public class UserFilterAnalyzer implements LogUtils{
     private static final int KEYWORD_PHRASES = 8;
     private static final int KEYWORD_CONNECTOR_AND = 9;
     private static final int KEYWORD_CONNECTOR_TO = 10;
-    private static final int KEYWORD_UNKNOWN = 0xFF;
+    //private static final int KEYWORD_UNKNOWN = 0xFF;
 
     public static final int PHRASE_TODAY = 1;
     public static final int PHRASE_LAST_COUPLE_OF_DAYS = 2;
@@ -66,7 +66,7 @@ public class UserFilterAnalyzer implements LogUtils{
 
     private int mDateStartIndex = -1;
     private int mDateEndIndex = -1;
-    private int mPlaceIndex = -1;
+    //private int mPlaceIndex = -1;
 
     private int    MATCH_SUCCESS  = 0;
     private int    MATCH_FAILURE  = 1;
@@ -282,8 +282,8 @@ public class UserFilterAnalyzer implements LogUtils{
 
         if (-1 == index) return foundPreposition;
         currentIndex = index;
-        if(place)
-          mPlaceIndex = index;
+        //if(place)
+          //mPlaceIndex = index;
 
         // Now we have index
         do {
@@ -616,7 +616,7 @@ public class UserFilterAnalyzer implements LogUtils{
         return (cal.isSet(Calendar.YEAR) || cal.isSet(Calendar.MONTH) || cal.isSet(Calendar.DAY_OF_MONTH));
     }
 
-    private String getStringFromKeyWord(Integer[] keyword_Val) {
+    /*private String getStringFromKeyWord(Integer[] keyword_Val) {
         switch(keyword_Val[0]) {
             case KEYWORD_MONTH_NAME:
                 return "KEYWORD_MONTH_NAME";
@@ -640,7 +640,7 @@ public class UserFilterAnalyzer implements LogUtils{
                 return "";
         }
 
-    }
+    }*/
 
     /*private int computeDateRanges(Map<String, Integer> pattern) {
         Calendar range1 = getNewCalObj();

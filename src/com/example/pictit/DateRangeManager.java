@@ -13,7 +13,7 @@ public class DateRangeManager implements LogUtils{
 
     private String TAG = "SpikIt> DateRangeManage";
     Calendar Cal = null;
-    private int mCurDayOfWeek = -1;
+    //private int mCurDayOfWeek = -1;
     private int mYear = -1;
     private int mMonth = -1;
     private int mDayOfMonth = -1;
@@ -21,7 +21,7 @@ public class DateRangeManager implements LogUtils{
         // TBD: Timezone issues ?
         //create Calendar instance
         Cal = Calendar.getInstance((Locale.getDefault()));
-        mCurDayOfWeek = Cal.get(Calendar.DAY_OF_WEEK);
+        //mCurDayOfWeek = Cal.get(Calendar.DAY_OF_WEEK);
         mYear = Cal.get(Calendar.YEAR);
         mMonth = Cal.get(Calendar.MONTH);
         mDayOfMonth = Cal.get(Calendar.DAY_OF_MONTH);
@@ -244,7 +244,7 @@ public class DateRangeManager implements LogUtils{
     private Pair<Long,Long> getPhraseRange(String eventDay, Integer month, Integer day) {
         Long val1, val2;
         Calendar today = Calendar.getInstance((Locale.getDefault()));
-        Integer currentMonth = today.get(Calendar.MONTH);
+        //Integer currentMonth = today.get(Calendar.MONTH);
         Integer currentDay = today.get(Calendar.DAY_OF_MONTH);
         if (mMonth == month) {
             if (currentDay >= day ) {

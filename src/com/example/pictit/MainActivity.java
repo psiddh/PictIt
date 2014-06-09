@@ -8,28 +8,22 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.app.Activity;
-import android.app.SearchManager;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
 import android.graphics.drawable.BitmapDrawable;
 import android.speech.RecognizerIntent;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.DisplayMetrics;
 import android.util.Log;
-import android.view.Display;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.EditText;
@@ -464,17 +458,11 @@ public class MainActivity extends Activity {
        .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
 
        //Bundle extras = data.getExtras();
-       int SearchState = data.getIntExtra("SearchState", 0);
+       //int SearchState = data.getIntExtra("SearchState", 0);
        if (!textMatchList.isEmpty()) {
         // If first Match contains the 'search' word
         // Then start web search.
-        if (textMatchList.get(0).contains("search")) {
-           String searchQuery = textMatchList.get(0);
-             searchQuery = searchQuery.replace("search","");
-           Intent search = new Intent(Intent.ACTION_WEB_SEARCH);
-           search.putExtra(SearchManager.QUERY, searchQuery);
-           startActivity(search);
-        } else {
+        {
             String searchQuery = textMatchList.get(0);
             //showToastMessage("Command :  " + searchQuery);
             showGridView(searchQuery);

@@ -38,8 +38,6 @@ public class RecyclingBitmapDrawable extends BitmapDrawable {
 
     private boolean mHasBeenDisplayed;
 
-    private int where = 0;
-
     public RecyclingBitmapDrawable(Resources res, Bitmap bitmap) {
         super(res, bitmap);
     }
@@ -70,9 +68,8 @@ public class RecyclingBitmapDrawable extends BitmapDrawable {
      *
      * @param isCached - Whether the drawable is being cached or not
      */
-    public void setIsCached(boolean isCached, int where) {
+    public void setIsCached(boolean isCached) {
         //Log.d(TAG, "isCached is ::  " +  isCached);
-        this.where = where;
         synchronized (this) {
             if (isCached) {
                 mCacheRefCount++;
