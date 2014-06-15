@@ -47,19 +47,20 @@ public class UserFilterAnalyzer implements LogUtils{
     //private static final int KEYWORD_UNKNOWN = 0xFF;
 
     public static final int PHRASE_TODAY = 1;
-    public static final int PHRASE_LAST_COUPLE_OF_DAYS = 2;
-    public static final int PHRASE_LAST_COUPLE_OF_WEEKS = 3;
-    public static final int PHRASE_LAST_COUPLE_OF_MONTHS = 4;
-    public static final int PHRASE_LAST_WEEKEND = 5;
-    public static final int PHRASE_LAST_WEEK = 6;
-    public static final int PHRASE_THIS_WEEK = 7;
-    public static final int PHRASE_LAST_MONTH = 8;
-    public static final int PHRASE_THIS_MONTH = 9;
-    public static final int PHRASE_CHRISTMAS = 10;
-    public static final int PHRASE_CHRISTMAS_EVE = 11;
-    public static final int PHRASE_BOXING_DAY = 12;
-    public static final int PHRASE_NEWYEAR = 13;
-    public static final int PHRASE_NEWYEARS_EVE = 14;
+    public static final int PHRASE_YESTERDAY = 2;
+    public static final int PHRASE_LAST_COUPLE_OF_DAYS = 3;
+    public static final int PHRASE_LAST_COUPLE_OF_WEEKS = 4;
+    public static final int PHRASE_LAST_COUPLE_OF_MONTHS = 5;
+    public static final int PHRASE_LAST_WEEKEND = 6;
+    public static final int PHRASE_LAST_WEEK = 7;
+    public static final int PHRASE_THIS_WEEK = 8;
+    public static final int PHRASE_LAST_MONTH = 9;
+    public static final int PHRASE_THIS_MONTH = 10;
+    public static final int PHRASE_CHRISTMAS = 11;
+    public static final int PHRASE_CHRISTMAS_EVE = 12;
+    public static final int PHRASE_BOXING_DAY = 13;
+    public static final int PHRASE_NEWYEAR = 14;
+    public static final int PHRASE_NEWYEARS_EVE = 15;
     //public static final int PHRASE_CHRISTMAS_AND_NEWYEAR = 15;
     public static final int PHRASE_THANKSGIVING = 16;
     public static final int PHRASE_JULY_4TH = 17;
@@ -209,6 +210,8 @@ public class UserFilterAnalyzer implements LogUtils{
         // phrases
         mDateRangeKeyWord.put("today",new Integer[] {KEYWORD_PHRASES, PHRASE_TODAY});
         mDateRangeKeyWord.put("today's pictures",new Integer[] {KEYWORD_PHRASES, PHRASE_TODAY});
+        mDateRangeKeyWord.put("yesterday",new Integer[] {KEYWORD_PHRASES, PHRASE_YESTERDAY});
+        mDateRangeKeyWord.put("yesterday's",new Integer[] {KEYWORD_PHRASES, PHRASE_YESTERDAY});
         mDateRangeKeyWord.put("last couple of weeks",new Integer[] {KEYWORD_PHRASES, PHRASE_LAST_COUPLE_OF_WEEKS});
         mDateRangeKeyWord.put("couple of weeks back",new Integer[] {KEYWORD_PHRASES, PHRASE_LAST_COUPLE_OF_WEEKS});
         mDateRangeKeyWord.put("couple of weeks ago",new Integer[] {KEYWORD_PHRASES, PHRASE_LAST_COUPLE_OF_WEEKS});
@@ -302,8 +305,8 @@ public class UserFilterAnalyzer implements LogUtils{
                 continue;
             }
         } while (currentIndex > 0 && retry < 6 && currentIndex < mWords.length);  // value 3 for fault tolerance.. yeah I know
-            if (DEBUG && (currentIndex - 1) >= 0 )
-                Log.d(TAG, "Found preposition at index " + (currentIndex - 1) + " Word : "  + mWords[currentIndex - 1]);
+            //if (DEBUG && (currentIndex - 1) >= 0 )
+                //Log.d(TAG, "Found preposition at index " + (currentIndex - 1) + " Word : "  + mWords[currentIndex - 1]);
             return foundPreposition;
         }
 
@@ -456,7 +459,7 @@ public class UserFilterAnalyzer implements LogUtils{
                   //if (DEBUG) Log.d(TAG, "Word : " + mWords[index] + " " +  getStringFromKeyWord(keyword_Val));
                   break;
               default:
-                  if (DEBUG && (mWords[index] != null)) Log.d(TAG, mWords[index] + " - Unknown Cnt : " + unknownCnt);
+                  //if (DEBUG && (mWords[index] != null)) Log.d(TAG, mWords[index] + " - Unknown Cnt : " + unknownCnt);
                   // Uh! dumb, lets stick to this fault tolerance for now.
                   if(++unknownCnt > 3) return null;
                   break;
@@ -583,6 +586,8 @@ public class UserFilterAnalyzer implements LogUtils{
         switch(phraseId) {
             case PHRASE_TODAY :
                 return mRangeMgr.getToday();
+            case PHRASE_YESTERDAY:
+                return mRangeMgr.getYesterday();
             case PHRASE_LAST_COUPLE_OF_DAYS :
             case PHRASE_LAST_COUPLE_OF_WEEKS :
             case PHRASE_LAST_COUPLE_OF_MONTHS :

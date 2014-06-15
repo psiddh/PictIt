@@ -1,21 +1,27 @@
 package com.example.pictit;
 
+
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 
+import com.example.pictit.AlertDialogFrag.AlertDialogFragment;
 import com.example.pictit.DataBaseManager.SyncState;
 
 import android.app.ActionBar;
 import android.app.Activity;
+import android.app.Application;
+import android.app.DialogFragment;
 import android.app.LoaderManager.LoaderCallbacks;
 import android.content.Context;
 import android.content.CursorLoader;
 import android.content.Intent;
 import android.content.Loader;
 import android.content.res.Configuration;
+import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -150,6 +156,8 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     ViewSwitcher mViewSwitcher;
     boolean mShowGrid = false;
 
+    private String mShowWarningMenuItem = null;
+
     private Handler mHandler = new Handler(Looper.getMainLooper()) {
             public void handleMessage (Message msg) {
                  switch (msg.what) {
@@ -187,24 +195,8 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         mActBar = getActionBar();
 
         memClass = ((ActivityManager) this.getSystemService( Context.ACTIVITY_SERVICE )).getMemoryClass();
-        cacheSize = 1024 * 1024 * memClass / 8;
+        cacheSize = (1024 *  1024 * memClass) / 8;
 
-        mMemoryCache = new LruCache<String, BitmapDrawable>(cacheSize) {
-            protected int sizeOf(String key, BitmapDrawable value) {
-                final int bitmapSize = getBitmapSize(value) / 1024;
-                return bitmapSize == 0 ? 1 : bitmapSize;
-            }
-
-
-            protected void entryRemoved( boolean evicted, String key, BitmapDrawable oldValue, BitmapDrawable newValue ) {
-                if (RecyclingBitmapDrawable.class.isInstance(oldValue)) {
-                    // The removed entry is a recycling drawable, so notify it
-                    // that it has been removed from the memory cache
-                    ((RecyclingBitmapDrawable) oldValue).setIsCached(false);
-                }
-              }
-
-        };
         Intent intent = getIntent();
         String filter = intent.getExtras().getString("filter");
         mUserFilter = filter;
@@ -219,6 +211,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         mActBar.setDisplayHomeAsUpEnabled(true);
 
         mConnectivityManager =  (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
+
         mDbHelper = DataBaseManager.getInstance(this);
         WindowManager wm = (WindowManager) this.getSystemService(Context.WINDOW_SERVICE);
         Display mDisplay = wm.getDefaultDisplay();
@@ -226,27 +219,39 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         mDisplay.getMetrics(mOutMetrics);
         mDensity = this.getResources().getDisplayMetrics().density;
         mViewSwitcher.setBackgroundColor(Color.DKGRAY);
-        /*mgridView = (GridView) findViewById(R.id.gridview);
-        mgridView.setBackgroundColor(color.darker_gray);
-        mgridView.setVerticalSpacing(1);
-        mgridView.setHorizontalSpacing(1);
-        mgridView.setOnItemClickListener(new OnItemClickListener()
-        {
-            public void onItemClick(AdapterView parent,
-            View v, int position, long id)
-            {
-                Toast.makeText(getBaseContext(),
-                        "pic" + (position + 1) + " selected",
-                        Toast.LENGTH_SHORT).show();
-            }
-        });*/
 
         setupViews();
 
         if (mDbHelper.getState() == DataBaseManager.SyncState.SYNC_STATE_COMPLETED) {
             mUserFilterContainsAPLACES = mDbHelper.retreiveAllPlacesFromStringIfExists(mUserFilter);
+        } else if (mDbHelper.getState() == DataBaseManager.SyncState.SYNC_STATE_INPROGRESS) {
+            TextView txtView = (TextView) mViewSwitcher.findViewById(R.id.displayViewProgressTextView);
+            txtView.setText("Please wait, Loading pictures may take a while! Background Sync is still in-progress");
         }
     }
+
+    /*private void updayeWarningMenuItem() {
+        SyncState state = mDbHelper.getState();
+        if (state == SyncState.SYNC_STATE_INCOMPLETE) {
+            mShowWarningMenuItem = "Warning: You may see Inconsistent / Incorrect Results. \n\n" +
+                    "Probable Reason: Background Sync State is in-complete due to an unexpected error! ";
+        } else if (state == SyncState.SYNC_STATE_INPROGRESS) {
+            mShowWarningMenuItem = "Warning: You may see Inconsistent / Incorrect Results. \n\n" +
+                    "Probable Reason: Background Sync still in-progress! \n\n" +
+                    "TIP: Please retry again when the sync is completed (or) retry after some time for exact results";
+        } else if (state == SyncState.SYNC_STATE_ABORTED) {
+            mShowWarningMenuItem = "Warning: You may see Inconsistent / Incorrect Results. \n\n" +
+                    "Probable Reason: Background Sync State is in-complete due to an unexpected error! ";
+        } else if (state == SyncState.SYNC_STATE_UPDATE) {
+            mShowWarningMenuItem = "Warning: You may see Inconsistent / Incorrect Results. \n\n" +
+                    "Probable Reason: Background Sync UPDATE still in-progress! \n\n" +
+                    "TIP: Please retry again when the sync is up-to-date (or) retry after some time for exact results";
+        } else if (state == SyncState.SYNC_STATE_COMPLETED) {
+            mShowWarningMenuItem = "Everything looks OK \n\n" +
+                    "TIP: If you still see Inconsistent / Incorrect Results while filtering your pictures by 'places', " +
+                    "Please ensure that your 'camera' pictures were GeoTagged (at the time of taking the picture(s)) in order to successfully search by 'places' ";
+        }
+    }*/
 
     private String getTitleFromPair(Pair<Long, Long> pair) {
         long ms_in_day = 86400000;
@@ -342,7 +347,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
     @Override
     public void onDestroy() {
-       if (!mLoadImagesInBackground.isCancelled()) {
+       if (mLoadImagesInBackground != null && !mLoadImagesInBackground.isCancelled()) {
            mLoadImagesInBackground.cancel(true);
        }
        //mImageAdapter.clearCache();
@@ -460,8 +465,8 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             mGridCount = data.getCount();
             setupCursor(data);
 
-            new LoadImagesInBackGround(data, this).execute();
-            mImageAdapter = new GridImageAdapter(getApplicationContext());
+            new LoadImagesInBackGround(this.getApplication(), data).execute();
+            mImageAdapter = new GridImageAdapter(this.getApplication());
             mDisplayImages.setAdapter(mImageAdapter);
         } else {
             //imagePath = imageUri.getPath();
@@ -475,7 +480,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     }
 
     void setupCursor(Cursor cur) {
-        if (cur.moveToLast()) {
+        if (cur.moveToLast() && !cur.isClosed()) {
             id = cur.getColumnIndex(
                     MediaStore.Images.Media._ID);
             bucketColumn = cur.getColumnIndex(
@@ -495,6 +500,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         if (mShowGrid) {
             getMenuInflater().inflate(R.menu.menu_display_view, menu);
             MenuItem item = menu.findItem(R.id.menu_item_pick_all);
+            item.setVisible(true);
+        }
+        if (mShowWarningMenuItem != null) {
+            getMenuInflater().inflate(R.menu.menu_main, menu);
+            MenuItem item = menu.findItem(R.id.menu_item_info);
             item.setVisible(true);
         }
         return true;
@@ -518,13 +528,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             case android.R.id.home:
                 onBackPressed();
                 break;
-            /*case R.id.menu_item_search:
-                Intent intent = new Intent(getBaseContext(), WiFiDirectActivity.class);
-                intent.putStringArrayListExtra("image_paths", mList);
-                startActivity(intent);
-                return true;*/
-            default:
-                break;
+            case R.id.menu_item_info:
+               DialogFragment newFragment = AlertDialogFragment.newInstance(
+                       "STATUS", mShowWarningMenuItem);
+               newFragment.show(getFragmentManager(), "dialog");
+                    break;
         }
         return false;
     }
@@ -574,23 +582,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         return null;
     }
 
-    /*private Intent createShareIntent() {
-        Intent shareIntent = new Intent();
-        shareIntent.setAction(Intent.ACTION_SEND_MULTIPLE);
-         for (int i = 0; i < mList.size(); i++) {
-             Uri imageUri = Uri.parse("file://" + mList.get(i));
-             mImageUris.add(imageUri);
-         }
-         shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, mImageUris);
-         shareIntent.setType("image/jpeg");
-         return shareIntent;
-    }*/
-
     public class CheckableLayout extends FrameLayout implements Checkable {
         private boolean mChecked = false;
 
-        public CheckableLayout(Context context) {
-            super(context);
+        public CheckableLayout(Context mContext) {
+            super(mContext);
         }
 
         public void setChecked(boolean checked) {
@@ -615,7 +611,11 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     public class MultiChoiceModeListener implements
             GridView.MultiChoiceModeListener {
         public boolean onCreateActionMode(ActionMode mode, Menu menu) {
-            String state = (mState == SelectState.ALL) ? "Multi-Select " : "Cherry-Pick ";
+            String state = null;
+            if ((mState == SelectState.ALL) || (mState == SelectState.ALL_INPROGRESS))
+                state = "Multi-Select ";
+            else
+                state = "Cherry-Pick ";
             mode.setTitle(state + "Mode");
             //mode.setSubtitle("1 Picture picked");
             //MenuInflater inflater = getMenuInflater();
@@ -632,7 +632,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         }
 
         public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
-            mState = SelectState.CHERRY_PICK;
+            //mState = SelectState.CHERRY_PICK;
             return true;
         }
 
@@ -682,6 +682,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
      */
     class GridImageAdapter extends BaseAdapter {
         private Context mContext;
+        private Resources mResources = null;
         public void addBitmapToCache(String data, BitmapDrawable value) {
             //BEGIN_INCLUDE(add_bitmap_to_cache)
             if (data == null || value == null) {
@@ -693,9 +694,10 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 if (RecyclingBitmapDrawable.class.isInstance(value)) {
                     // The removed entry is a recycling drawable, so notify it
                     // that it has been added into the memory cache
-                    ((RecyclingBitmapDrawable) value).setIsCached(true);
+                    ((RecyclingBitmapDrawable) value).setIsCached(true, 0);
                 }
-                mMemoryCache.put(data, value);
+                if (getBitmapFromMemCache(data) == null)
+                    mMemoryCache.put(data, value);
             }
         }
 
@@ -715,8 +717,27 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
             }
         }
 
-        public GridImageAdapter(Context context) {
-            mContext = context;
+        public GridImageAdapter(Application application) {
+            super();
+            mContext = application;
+            mResources = mContext.getResources();
+            mMemoryCache = new LruCache<String, BitmapDrawable>(cacheSize) {
+                protected int sizeOf(String key, BitmapDrawable value) {
+                    final int bitmapSize = getBitmapSize(value) / 1024;
+                    return bitmapSize == 0 ? 1 : bitmapSize;
+                }
+
+
+                protected void entryRemoved( boolean evicted, String key, BitmapDrawable oldValue, BitmapDrawable newValue ) {
+                    Log.d(TAG, "Entry Removed with key " + key + " evicted : " + evicted);
+                    if (RecyclingBitmapDrawable.class.isInstance(oldValue)) {
+                        // The removed entry is a recycling drawable, so notify it
+                        // that it has been removed from the memory cache
+                        ((RecyclingBitmapDrawable) oldValue).setIsCached(false, 1);
+                    }
+                  }
+
+            };
         }
 
         public void addPhoto(Bitmap photo) {
@@ -726,45 +747,51 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         public void addLRUPhoto(Bitmap photo) {
             int val = mMemoryCache.putCount();
             BitmapDrawable drawable = null;
-            drawable = new RecyclingBitmapDrawable(getResources(), photo);
+            drawable = new RecyclingBitmapDrawable(mResources, photo);
             addBitmapToCache(val+"", drawable);
         }
 
         public int getCount() {
-            // TBD: Need to check this ?
             //return photos.size();
             return mMemoryCache.putCount();
         }
 
         public Object getItem(int position) {
             //return photos.get(position);
-            return mMemoryCache.get(position+"");
+            return null; //mMemoryCache.get(position+"");
         }
 
         public long getItemId(int position) {
-            return position;
+            return 0; //position;
         }
 
         public View getView(int position, View convertView, ViewGroup parent) {
             ImageView imageView ;
-            CheckableLayout l;
+            //CheckableLayout l;
             if (convertView == null) {
-                l = new CheckableLayout(mContext);
+                //l = new CheckableLayout(mContext);
                 imageView = new RecyclingImageView(mContext);
+                //imageView.setLayoutParams(new GridView.LayoutParams(240, 240));
                 imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
                 //imageView = new ImageView(mContext);
-                l.addView(imageView);
+                //l.addView(imageView);
             } else {
-                l = (CheckableLayout) convertView;
-                imageView = (RecyclingImageView) l.getChildAt(0);
+                //l = (CheckableLayout) convertView;
+                //imageView = (RecyclingImageView) l.getChildAt(0);
+                imageView = (ImageView) convertView;
             }
 
-            if (mImageAdapter != null) {
-                BitmapDrawable drawable = mImageAdapter.getBitmapFromMemCache(position+"");
-                imageView.setImageDrawable(drawable);
-                imageView.setPadding(4, 4, 4, 4);
+            BitmapDrawable drawable = getBitmapFromMemCache(position+"");
+            if (drawable!= null && !drawable.getBitmap().isRecycled()) {
+               imageView.setImageDrawable(drawable);
+               imageView.setPadding(4, 4, 4, 4);
             }
-            return l;
+            if (drawable == null) {
+                    BitmapWorkerTask task = new BitmapWorkerTask(imageView);
+                    task.execute(position+"");
+
+            }
+             return imageView;
         }
     }
 
@@ -777,8 +804,8 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         for (Bitmap image : value) {
             //mImageAdapter.addPhoto(image);
             mImageAdapter.addLRUPhoto(image);
-            mImageAdapter.notifyDataSetChanged();
         }
+        mImageAdapter.notifyDataSetChanged();
     }
 
     boolean addtoListIfNotFound(String path) {
@@ -803,14 +830,165 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
          return false;
      }
 
+    class BitmapWorkerTask extends AsyncTask<String, Void, Bitmap>{
+           private final WeakReference<ImageView> imageViewReference;
+           public BitmapWorkerTask(ImageView imageView) {
+            // Use a WeakReference to ensure the ImageView can be garbage collected
+            imageViewReference = new WeakReference<ImageView>(imageView);
+           }
+
+           @Override
+           protected Bitmap doInBackground(String... params) {
+               int index = mList.indexOf(String.valueOf(params[0]));
+               if (index != -1 ) return null;
+            final Bitmap bitmap = getPicture(mList.get(index));
+            mImageAdapter.addLRUPhoto(bitmap);
+            return bitmap;
+           }
+
+           @Override
+           protected void onPostExecute(Bitmap bitmap) {
+            if (imageViewReference != null && bitmap != null) {
+             final ImageView imageView = (ImageView)imageViewReference.get();
+             if (imageView != null) {
+              imageView.setImageBitmap(bitmap);
+             // mDisplayImages.
+             }
+            }
+           }
+          }
+
+    Bitmap getPicture(String path) {
+        ExifInterface intf = null;
+        Bitmap bitmap = null;
+        Bitmap newBitmap = null;
+
+        if (path == null) {
+          return null;
+        }
+        try {
+            intf = new ExifInterface(path);
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
+
+        if(intf == null) {
+            return null;
+        }
+        //mDisplay.getMetrics(mOutMetrics);
+        float dpHeight = mOutMetrics.heightPixels / mDensity;
+        float dpWidth  = mOutMetrics.widthPixels / mDensity;
+        int width=(int) (dpWidth);
+        int height=(int) (dpHeight);
+        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE ) {
+            width = height;
+        }
+        if (intf.hasThumbnail() ) {
+           byte[] thumbnail = intf.getThumbnail();
+           BitmapFactory.Options options = new BitmapFactory.Options();
+           options.inJustDecodeBounds = true;
+           BitmapFactory.decodeByteArray(thumbnail,0,thumbnail.length,options);
+
+           // Calculate inSampleSize
+           options.inSampleSize = calculateInSampleSize(options, width, width);
+           // Decode bitmap with inSampleSize set
+           options.inJustDecodeBounds = false;
+           bitmap = BitmapFactory.decodeByteArray(thumbnail, 0, thumbnail.length, options);
+           if (bitmap != null) {
+               newBitmap = Bitmap.createScaledBitmap(bitmap, width, width, true);
+               if (newBitmap!= bitmap){
+                   bitmap.recycle();
+                   bitmap = null;
+               }
+               if (newBitmap != null) {
+                   return newBitmap;
+               }
+           }
+           return bitmap;
+        } else  {
+           Uri imageUri = null;
+            try {
+               // First decode with inJustDecodeBounds=true to check dimensions
+               final BitmapFactory.Options options = new BitmapFactory.Options();
+               options.inJustDecodeBounds = true;
+               imageUri = Uri.parse("file://" + path);
+               BitmapFactory.decodeStream(getContentResolver().openInputStream(imageUri), null,options);
+
+               // Calculate inSampleSize
+               options.inSampleSize = calculateInSampleSize(options, width, width);
+
+               // Decode bitmap with inSampleSize set
+               options.inJustDecodeBounds = false;
+               bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(imageUri), null,options);
+               //bitmap = decodeSampledBitmapFromFile(path,width,width);
+
+               if (bitmap != null) {
+                   newBitmap = Bitmap.createScaledBitmap(bitmap, width, width, true);
+                   if (newBitmap!= bitmap){
+                       bitmap.recycle();
+                       bitmap = null;
+                   }
+                   if (newBitmap != null) {
+                       return newBitmap;
+                   }
+               }
+           } catch (IOException e) {
+               //Error fetching image, try to recover
+           }
+         }
+        return null;
+    }
+
+    public Bitmap decodeSampledBitmapFromFile(String filename,
+            int reqWidth, int reqHeight) {
+
+        // First decode with inJustDecodeBounds=true to check dimensions
+        final BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(filename, options);
+
+        // Calculate inSampleSize
+        options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
+
+        // If we're running on Honeycomb or newer, try to use inBitmap
+        if (Utils.hasHoneycomb()) {
+            //addInBitmapOptions(options, cache);
+        }
+
+        // Decode bitmap with inSampleSize set
+        options.inJustDecodeBounds = false;
+        return BitmapFactory.decodeFile(filename, options);
+    }
+
+private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
+    // Raw height and width of image
+    final int height = options.outHeight;
+    final int width = options.outWidth;
+    int inSampleSize = 1;
+
+    if (height > reqHeight || width > reqWidth) {
+
+        final int halfHeight = height / 2;
+        final int halfWidth = width / 2;
+
+        // Calculate the largest inSampleSize value that is a power of 2 and keeps both
+        // height and width larger than the requested height and width.
+        while ((halfHeight / inSampleSize) > reqHeight
+                && (halfWidth / inSampleSize) > reqWidth) {
+            inSampleSize *= 2;
+        }
+    }
+
+    return inSampleSize;
+}
     class LoadImagesInBackGround extends AsyncTask<Object, Bitmap, Object> {
 
         private Cursor mCursor;
         private Context mContext;
 
-        LoadImagesInBackGround(Cursor cur, Context context) {
+        LoadImagesInBackGround(Application application, Cursor cur) {
             mCursor = cur;
-            mContext = context;
+            mContext = application;
         }
         /**
          * Load images in the background, and display each image on the screen.
@@ -846,7 +1024,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
          */
         @Override
         protected void onPreExecute(){
-            mLoadImagesInBackground = this;
+            //mLoadImagesInBackground = this;
         }
         @Override
         protected void onPostExecute(Object result) {
@@ -856,8 +1034,18 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 v.setVisibility(View.GONE);
                 TextView txtView = (TextView) mViewSwitcher.findViewById(R.id.displayViewProgressTextView);
                 txtView.setText("Sorry! No results found. Try again ...");
+
+                mShowWarningMenuItem = "Zilch! Please consider the following tips in order to see the desired results \n\n" +
+                        "TIP 1: If you are trying to filter your pictures by 'places' / 'place' where the pictures have been taken, " +
+                        "Please ensure that your 'camera' pictures were GeoTagged (at the time of taking the picture(s)) in order to successfully search by 'places' \n\n " +
+                         "TIP 2: Please ensure that 'voice command to text' translation of dates and places has happened properly \n\n"+
+                         "TIP 3: When the voice filters are applied in the form of 'dates' / 'date ranges' / 'place' , Please ensure that pictures have the respective meta-data (timestamp , place) associated with it.\n\n" +
+                         "TIP 4: Note that filters are ONLY applied to 'camera' pictures in the photo Albums.";
             }
             setProgressBarIndeterminateVisibility(false);
+            if (mShowWarningMenuItem != null) {
+                invalidateOptionsMenu();
+            }
         }
 
         @Override
@@ -865,91 +1053,9 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
 
         }
 
-        Bitmap getPicture(String path) {
-            ExifInterface intf = null;
-            Bitmap bitmap = null;
-            Bitmap newBitmap = null;
 
-            if (path == null) {
-              return null;
-            }
-            try {
-                intf = new ExifInterface(path);
-            } catch(IOException e) {
-                e.printStackTrace();
-            }
 
-            if(intf == null) {
-                return null;
-            }
-            //mDisplay.getMetrics(mOutMetrics);
-            float dpHeight = mOutMetrics.heightPixels / mDensity;
-            float dpWidth  = mOutMetrics.widthPixels / mDensity;
-            int width=(int) (dpWidth);
-            int height=(int) (dpHeight);
-            if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE ) {
-                width = height;
-            }
-            if (intf.hasThumbnail() ) {
-               byte[] thumbnail = intf.getThumbnail();
-               //LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-               bitmap = BitmapFactory.decodeByteArray(thumbnail, 0, thumbnail.length);
-               if (bitmap != null) {
-                   newBitmap = Bitmap.createScaledBitmap(bitmap, width, width, true);
-                   if (newBitmap!= bitmap){
-                       bitmap.recycle();
-                       bitmap = null;
-                   }
-                   if (newBitmap != null) {
-                       return newBitmap;
-                   }
-               }
-               return bitmap;
-            } else {
-               Uri imageUri = null;
-               try {
-                   imageUri = Uri.parse("file://" + path);
-                   bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(imageUri));
-                   if (bitmap != null) {
-                       newBitmap = Bitmap.createScaledBitmap(bitmap, width, width, true);
-                       if (newBitmap!= bitmap){
-                           bitmap.recycle();
-                           bitmap = null;
-                       }
-                       if (newBitmap != null) {
-                           return newBitmap;
-                       }
-                   }
-               } catch (IOException e) {
-                   //Error fetching image, try to recover
-               }
-             }
-            return null;
-        }
-
-    /*private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
-        // Raw height and width of image
-        final int height = options.outHeight;
-        final int width = options.outWidth;
-        int inSampleSize = 1;
-
-        if (height > reqHeight || width > reqWidth) {
-
-            final int halfHeight = height / 2;
-            final int halfWidth = width / 2;
-
-            // Calculate the largest inSampleSize value that is a power of 2 and keeps both
-            // height and width larger than the requested height and width.
-            while ((halfHeight / inSampleSize) > reqHeight
-                    && (halfWidth / inSampleSize) > reqWidth) {
-                inSampleSize *= 2;
-            }
-        }
-
-        return inSampleSize;
-    }*/
-
-        /*private Bitmap decodeSampledBitmapFromResource(int resId,
+       /* private Bitmap decodeSampledBitmapFromResource(int resId,
                 int reqWidth, int reqHeight) {
 
             // First decode with inJustDecodeBounds=true to check dimensions
@@ -981,9 +1087,9 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 if (null != mPairRange) {
                    mRangeMgr.printDateAndTime(mCalendar);
                    if ((dateinMilliSec >= mPairRange.first) && (dateinMilliSec <= mPairRange.second)) {
-                       if (DEBUG) Log.d(TAG, "****** Added ********* ");
+                       //if (DEBUG) Log.d(TAG, "****** Added ********* ");
                        mRangeMgr.printDateAndTime(mCalendar);
-                       if (DEBUG) Log.d(TAG, "****** Added ********* ");
+                       //if (DEBUG) Log.d(TAG, "****** Added ********* ");
                        dateRangeMatchFound= 0;
                        added = true;//addtoListIfNotFound(path);
                    } else {
@@ -997,6 +1103,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                    GeoDecoder geoDecoder = null;
                    SyncState dbState = mDbHelper.getState();
                    int matchState = mMatchState;
+                   if (cur.isClosed()) break;
                    Integer currentId = cur.getInt(id);
                    if (dbState != DataBaseManager.SyncState.SYNC_STATE_COMPLETED) {
                        matchState = mAnalyzer.getMatchState();
@@ -1011,7 +1118,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                            added = false;
                        }
                    }
-                   List<Address> address;
+                   List<Address> address = null;
                    ExifInterface intf = null;
                    try {
                        intf = new ExifInterface(path);
@@ -1123,6 +1230,8 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                       !(mConnectivityManager.getActiveNetworkInfo().isConnectedOrConnecting())) {
                       // mConnectivityManager.getActiveNetworkInfo() being null happens in airplane mode I guess
                       Log.d(TAG,"Ooops No Connection.. Try Later");
+                      mShowWarningMenuItem = "Warning: You may see Inconsistent / Incorrect Results. \n\n" +
+                              "Probable Reason: Check your internet connection! It looks like there is no active data connection. ";
                       continue;
                    }
                    try {
@@ -1149,7 +1258,15 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                            // TODO Auto-generated catch block
                            e.printStackTrace();
                    }
-                   address = geoDecoder.getAddress(mContext);
+                   try {
+                       address = geoDecoder.getAddress(mContext);
+                   } catch (IOException e) {
+                       // TODO Auto-generated catch block
+                       //e.printStackTrace();
+                       mShowWarningMenuItem = "Warning: You may see Inconsistent / Incorrect Results. \n\n" +
+                                 "Probable Reason:  Geocoding / Reverse Geocoding Service was not available partially for a few / all pictures. As a result, such pictures cannot be displayed in the grid view. Please retry again later if you see incomplete results. \n\n" +
+                                 "TIP: If the issue persists, (Though not ideal!) please consider rebooting the device. This issue is outside the scope of the application";
+                   }
                    String locality = null;
                    String country = null;
                    String adminArea = null;
@@ -1216,8 +1333,13 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
                 try {
                     return getPicture(path);
                 } catch (OutOfMemoryError e) {
-                    Log.e("Map", "DisplayView - Out Of Memory Error " + e.getLocalizedMessage());
-                    //System.gc();
+                    //Log.e("Map", "DisplayView - Out Of Memory Error " + e.getLocalizedMessage());
+                    /*try {
+                           android.os.Debug.dumpHprofData("/sdcard/dump.hprof");
+                         }
+                    catch (IOException e1) {
+                           e1.printStackTrace();
+                    }*/
                 }
 
             }

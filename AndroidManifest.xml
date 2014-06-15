@@ -15,10 +15,6 @@
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
-    <!-- Google Play filtering -->
-    <uses-feature android:name="android.hardware.wifi.direct" android:required="true"/>
-
-
     <application
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
@@ -39,13 +35,6 @@
             android:label="@string/app_name"
             android:configChanges="orientation|screenSize">
         </activity>
-         <activity
-            android:name="com.example.pictit.WiFiDirectActivity"
-            android:label="@string/app_name" >
-        </activity>
-
-                 <!-- Used for transferring files  after a successful connection -->
-        <service android:enabled="true" android:name=".FileTransferService" />
          <service android:enabled="true" android:name=".SyncIntentService"></service>
 
 		<receiver android:name="NetworkChangeReceiver"

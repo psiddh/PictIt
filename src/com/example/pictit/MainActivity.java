@@ -3,18 +3,26 @@ package com.example.pictit;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import com.example.pictit.AlertDialogFrag.AlertDialogFragment;
+import com.example.pictit.DataBaseManager.SyncState;
+
 import android.media.ExifInterface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.app.Activity;
+import android.app.DialogFragment;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.speech.RecognizerIntent;
+import android.support.v4.content.LocalBroadcastManager;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -40,6 +48,8 @@ public class MainActivity extends Activity {
     private static final int VOICE_RECOGNITION_REQUEST_CODE = 1001;
     private static final int SHOW_GRID_AFTER_DELAY = 1002;
     private static final int GRID_DISPLAY_DELAY = 3000;
+
+    private int mMainMenuStatusDisplay = 0xFF;
 
     private ProgressBar mProgress;
     private EditText mEditText;
@@ -67,24 +77,51 @@ public class MainActivity extends Activity {
 
     private TextSwitcher mSwitcher;
     // Array of String to Show In TextSwitcher
-    String mTextToShow[]={"Click Mic and Say or Type, \n \"Pictures taken in August\"",
-                          "Click Mic and Say or Type, \n \"March 1st to Oct 30th\"",
-                          "Click Mic and Say or Type, \n \"June Pictures in Hawaii\"",
-                          "Click Mic and Say or Type, \n \"May Sep\"",
-                          "Click Mic and Say or Type, \n \"Pictures taken at Timbuktu\"",
-                          "Click Mic and Say or Type, \n \"2013 to 2014\"",
-                          "Click Mic and Say or Type, \n \"2014 Pictures\"",
-                          "Click Mic and Say or Type, \n \"Pictures from San Francisco in August\"",
-                          "Click Mic and Say or Type, \n \"California\"",
-                          "Click Mic and Say or Type, \n \"Pictures between January and March\"",
-                          "Click Mic and Say or Type, \n \"Feb 1st Apr 1st\"",
-                          "Click Mic and Say or Type, \n \"July 4th\"",
-                          "Click Mic and Say or Type, \n \"November 1st to December 25th 2013\"",
-                          "Click Mic and Say or Type, \n \"Pictures from Norway\"",
-                          "Click Mic and Say or Type, \n \"Dec 25th at New York\"",
-                          "Click Mic and Say or Type, \n \"Today's pictures\"",
-                          "Click Mic and Say or Type, \n \"January 25 2013 to July 4th 2014 at Florida\"",
-                          "Click Mic and Say or Type, \n \"Pictures since last couple of weeks\""};
+    String mTextToShow[]={"Click mic icon and SAY something like... OR simply TYPE, \"In August\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"March 1st to Oct 30th\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"June Pictures in Hawaii\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"May Sep\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"July\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"July 2014\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"December\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"In October\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"At Timbuktu\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"India Pictures\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"Madagascar\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"2013 to 2014\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"2014 Pictures\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"San Francisco in August\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"2012 in London\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"California\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"Between January and March\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"Feb 1st Apr 1st\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"July 4th\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"4th of July\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"November 1st to December 25th 2013\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"Pictures from Norway\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"Dec 25th at New York\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"Today's pictures\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"January 25 2013 to July 4th 2014 at Florida\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"Yesterday's pictures\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"Yesterday\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"Christmas\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"Christmas Eve\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"Boxing Day\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"last week\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"this week\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"NewYear\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"Christmas Eve\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"last weekend\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"last couple of weeks\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"last couple of months\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"last couple of days\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"couple of days back\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"couple of days ago\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"couple of months back\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"couple of months ago\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"Since last month\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"this month\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"couple of weeks ago"};
     int mTimeOutTextVals = 3000;
     private static final int SHOW_ANIM_TEXT = 1003;
 
@@ -110,6 +147,12 @@ public class MainActivity extends Activity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         //getMenuInflater().inflate(R.menu.menu_main, menu);
+        if (mMainMenuStatusDisplay != 0xFF) {
+            getMenuInflater().inflate(R.menu.menu_main, menu);
+            MenuItem item = menu.findItem(R.id.menu_item_info);
+            item.setVisible(true);
+        }
+        //mMainMenuStatusDisplay = 0xFF;
         return true;
     }
 
@@ -176,7 +219,6 @@ public class MainActivity extends Activity {
                  return myText;
              }
          });
-
          // Declare the in and out animations and initialize them
          Animation in = AnimationUtils.loadAnimation(this,android.R.anim.fade_in);
          Animation out = AnimationUtils.loadAnimation(this,android.R.anim.fade_out);
@@ -328,6 +370,35 @@ public class MainActivity extends Activity {
             case android.R.id.home:
                 onBackPressed();
                 break;
+            case R.id.menu_item_info:
+                String msg = "Voice filter by 'places' on your Gallery --> Camera pictures may not work due to an unexpected error! \n\n" +
+                             "However search by 'dates' or 'date ranges' shall continue to work.";
+                switch(mMainMenuStatusDisplay) {
+                    case -2:
+                        break;
+                    case -1:
+                        msg = "Oops! You may see inconsistent results. \n\n" +
+                              "Probale Reason(s): Either there was no active data connection detected at the time of sync (or) Some Pictures' Geo-Cooridnates have not been decoded properly by GeoCoder service. As a result, filtering by 'place' may yield incomplete results";
+                        break;
+                    case 0:
+                        msg = "Sync Status Completed! \n\nReady to search by 'dates' AND / OR 'places' on your Gallery --> Camera  pictures. \n\n" +
+                              "TIP: Please ensure that your camera pictures were GeoTagged properly in order to successfully search by 'places' ";
+                        break;
+                    case 1:
+                        msg = "Please Wait! Background Sync In Progress. \n\nSearch by 'places' may yield incomplete / inconsistent results. \n\n" +
+                              "However search by 'dates' or 'date ranges' shall continue to work. ";
+                        break;
+                    case 2:
+                        msg = "Please Wait! Background Sync Update In Progress. \n\nSearch by 'places' may yield incomplete / inconsistent results. \n\n" +
+                              "However search by 'dates' or 'date ranges' shall continue to work. ";
+                        break;
+                    default:
+                        break;
+                }
+                DialogFragment newFragment = AlertDialogFragment.newInstance(
+                        "STATUS", msg);
+                newFragment.show(getFragmentManager(), "dialog");
+                break;
             default:
                 break;
         }
@@ -387,9 +458,31 @@ public class MainActivity extends Activity {
             }
         };
         mImgButton.setOnClickListener(mClkListener);
-        //getLoaderManager().initLoader(0, null, this);
+        LocalBroadcastManager.getInstance(this).registerReceiver(message,
+                new IntentFilter("sync-state"));
     }
 
+    private BroadcastReceiver message = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            // TODO Auto-generated method stub
+            SyncState state = (SyncState) intent.getSerializableExtra("sync-status");
+            if (state == SyncState.SYNC_STATE_COMPLETED) {
+                mMainMenuStatusDisplay = 0;
+            } else if (state == SyncState.SYNC_STATE_INCOMPLETE) {
+                mMainMenuStatusDisplay = -1;
+            } else if (state == SyncState.SYNC_STATE_INPROGRESS) {
+                mMainMenuStatusDisplay = 1;
+            } else if (state == SyncState.SYNC_STATE_ABORTED) {
+                mMainMenuStatusDisplay = -2;
+            } else if (state == SyncState.SYNC_STATE_UPDATE) {
+                mMainMenuStatusDisplay = 2;
+            }
+
+            invalidateOptionsMenu();
+
+        }
+    };
     void showGridView(String filter) {
         // Just in case, remove any previously queued messages
         // TBD: Revisit this later?

@@ -31,12 +31,13 @@ import android.util.Log;
  */
 public class RecyclingBitmapDrawable extends BitmapDrawable {
 
-    static final String TAG = "SpickIt> CountingBitmapDrawable";
+    static final String TAG = "SpickiT> CountingBitmapDrawable";
 
     private int mCacheRefCount = 0;
     private int mDisplayRefCount = 0;
 
-    private boolean mHasBeenDisplayed;
+    private boolean mHasBeenDisplayed  = false;
+    private int where =0;
 
     public RecyclingBitmapDrawable(Resources res, Bitmap bitmap) {
         super(res, bitmap);
@@ -68,8 +69,9 @@ public class RecyclingBitmapDrawable extends BitmapDrawable {
      *
      * @param isCached - Whether the drawable is being cached or not
      */
-    public void setIsCached(boolean isCached) {
+    public void setIsCached(boolean isCached, int where) {
         //Log.d(TAG, "isCached is ::  " +  isCached);
+        this.where = where;
         synchronized (this) {
             if (isCached) {
                 mCacheRefCount++;
@@ -84,14 +86,17 @@ public class RecyclingBitmapDrawable extends BitmapDrawable {
     }
 
     private synchronized void checkState() {
+        if (this.where  == 1)
+            Log.d(TAG,"Recycle ? Display : " + (mDisplayRefCount) + " Cache : " + (mCacheRefCount) + "mHasBeenDisplayed  " + mHasBeenDisplayed + "  " + hasValidBitmap());
         if (mCacheRefCount <= 0 && mDisplayRefCount <= 0 && mHasBeenDisplayed
                 && hasValidBitmap()) {
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "RECYCLING    No longer being used or cached so recycling. "
+            //if (BuildConfig.DEBUG) {
+                Log.d(TAG, "YESSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS RECYCLING    No longer being used or cached so recycling. "
                         + toString());
-            }
-
-            getBitmap().recycle();
+            //}
+            Bitmap bitmap = getBitmap();
+            bitmap.recycle();
+            bitmap = null;
         }
     }
 

@@ -20,6 +20,8 @@ import android.content.Context;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
 import android.util.AttributeSet;
+import android.util.Log;
+import android.widget.Checkable;
 import android.widget.ImageView;
 
 import com.example.pictit.RecyclingBitmapDrawable;
@@ -28,9 +30,10 @@ import com.example.pictit.RecyclingBitmapDrawable;
  * Sub-class of ImageView which automatically notifies the drawable when it is
  * being displayed.
  */
-public class RecyclingImageView extends ImageView {
+public class RecyclingImageView extends ImageView implements Checkable{
 
-    static final String TAG = "SpickIt> RecyclingImageView";
+    static final String TAG = "SpickiT> RecyclingImageView";
+    private boolean mChecked = false;
 
     public RecyclingImageView(Context context) {
         super(context);
@@ -40,6 +43,22 @@ public class RecyclingImageView extends ImageView {
         super(context, attrs);
     }
 
+    public void setChecked(boolean checked) {
+        mChecked = checked;
+        if (checked) {
+          setBackground(getResources().getDrawable(R.drawable.bggrid));
+        } else {
+            setBackground(null);
+        }
+    }
+
+    public boolean isChecked() {
+        return mChecked;
+    }
+
+    public void toggle() {
+        setChecked(!mChecked);
+    }
     /**
      * @see android.widget.ImageView#onDetachedFromWindow()
      */
@@ -47,14 +66,15 @@ public class RecyclingImageView extends ImageView {
     protected void onDetachedFromWindow() {
         // This has been detached from Window, so clear the drawable
         setImageDrawable(null);
+        Log.d(TAG, "In onDetachedFromWindow");
         super.onDetachedFromWindow();
     }
 
-    @Override
+    /*@Override
     protected void onAttachedToWindow() {
         // This has been detached from Window, so clear the drawable
         super.onAttachedToWindow();
-    }
+    }*/
 
     /**
      * @see android.widget.ImageView#setImageDrawable(android.graphics.drawable.Drawable)
@@ -63,7 +83,6 @@ public class RecyclingImageView extends ImageView {
     public void setImageDrawable(Drawable drawable) {
         // Keep hold of previous Drawable
         final Drawable previousDrawable = getDrawable();
-
         // Call super to set new Drawable
         super.setImageDrawable(drawable);
 

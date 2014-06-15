@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
@@ -17,6 +18,8 @@ import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.provider.MediaStore;
 import android.util.Log;
+
+import android.support.v4.content.LocalBroadcastManager;
 
 public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
 
@@ -199,6 +202,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
               mConnectivityManager =  (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
           do {
               state = SyncState.SYNC_STATE_INPROGRESS;
+              sendBroadcast(state, null , null);
               if (cur.isClosed()) break;
               int id = cur.getInt(mId);
               String path = cur.getString(mDataColumn);
@@ -266,10 +270,14 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
                       e.printStackTrace();
               }
           } while (!cur.isClosed() && cur.moveToNext());
-          if (state == SyncState.SYNC_STATE_INPROGRESS && !isInCompleteFlg)
+          if (state == SyncState.SYNC_STATE_INPROGRESS && !isInCompleteFlg) {
               state = SyncState.SYNC_STATE_COMPLETED;
-          else
+              sendBroadcast(state, null , null);
+          }
+          else {
               state = SyncState.SYNC_STATE_INCOMPLETE;
+              sendBroadcast(state, null , null);
+          }
           cur.close();
           closedb();
           /*if (TEST_DB_INITIAL_CREATION_AND_CACHE_UPDATE_FOR_PLACE) {
@@ -283,6 +291,13 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
           }*/
       }
 
+      private void sendBroadcast(SyncState syncStatus, String syncStatusExtra, String syncStatusMsg) {
+          Intent intent = new Intent("sync-state");
+          intent.putExtra("sync-status", syncStatus);
+          intent.putExtra("sync-status-extra", syncStatusExtra);
+          intent.putExtra("sync-status-msg", syncStatusMsg);
+          LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
+      }
       /*private void deletedb() {
           // This is only for testing purpose
           opendb();

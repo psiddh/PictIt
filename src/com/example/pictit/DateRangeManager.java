@@ -124,6 +124,30 @@ public class DateRangeManager implements LogUtils{
         return p;
     }
 
+    public Pair<Long,Long> getYesterday() {
+         Long val1, val2;
+         Calendar yesterday = Calendar.getInstance((Locale.getDefault()));
+         yesterday.set(Calendar.YEAR, mYear);
+         yesterday.set(Calendar.MONTH, mMonth);
+         yesterday.set(Calendar.DAY_OF_MONTH, mDayOfMonth - 1);
+         yesterday.set(Calendar.HOUR_OF_DAY, 0);
+         yesterday.set(Calendar.MINUTE, 0);
+         yesterday.set(Calendar.SECOND, 0);
+         yesterday.set(Calendar.MILLISECOND, 0);
+         val1 = yesterday.getTimeInMillis();
+
+         yesterday.set(Calendar.YEAR, mYear);
+         yesterday.set(Calendar.MONTH, mMonth);
+         yesterday.set(Calendar.DAY_OF_MONTH, mDayOfMonth - 1);
+         yesterday.set(Calendar.HOUR_OF_DAY, 23);
+         yesterday.set(Calendar.MINUTE, 59);
+         yesterday.set(Calendar.SECOND, 59);
+         yesterday.set(Calendar.MILLISECOND, 999);
+         val2 = yesterday.getTimeInMillis();
+         Pair<Long, Long> p = new Pair<Long, Long>(val1,val2);
+         return p;
+     }
+
     public Pair<Long,Long> getLastCouple(int ID) {
         int offset = 0;
         switch(ID) {
