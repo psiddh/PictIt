@@ -381,7 +381,7 @@ public class MainActivity extends Activity {
                               "Probale Reason(s): Either there was no active data connection detected at the time of sync (or) Some Pictures' Geo-Cooridnates have not been decoded properly by GeoCoder service. As a result, filtering by 'place' may yield incomplete results";
                         break;
                     case 0:
-                        msg = "Sync Status Completed! \n\nReady to search by 'dates' AND / OR 'places' on your Gallery --> Camera  pictures. \n\n" +
+                        msg = "Background Sync Status Completed! \n\nReady to search by 'dates' AND / OR 'places' on your Gallery --> Camera  pictures. \n\n" +
                               "TIP: Please ensure that your camera pictures were GeoTagged properly in order to successfully search by 'places' ";
                         break;
                     case 1:
@@ -396,7 +396,7 @@ public class MainActivity extends Activity {
                         break;
                 }
                 DialogFragment newFragment = AlertDialogFragment.newInstance(
-                        "STATUS", msg);
+                        "INFO", msg);
                 newFragment.show(getFragmentManager(), "dialog");
                 break;
             default:

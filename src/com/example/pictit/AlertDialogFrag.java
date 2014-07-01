@@ -20,7 +20,7 @@ public class AlertDialogFrag extends Activity {
 
     void showDialog() {
         DialogFragment newFragment = AlertDialogFragment.newInstance(
-                "alert_dialog_two_buttons_title", null);
+                "alert_dialog", null);
         newFragment.show(getFragmentManager(), "dialog");
     }
 
@@ -38,7 +38,7 @@ public class AlertDialogFrag extends Activity {
 			String title = getArguments().getString("title");
 			String message = getArguments().getString("message");
 			return new AlertDialog.Builder(getActivity())
-			        .setIcon(R.drawable.good_to_go)
+			        .setIcon(R.drawable.ic_launcher)
 			        .setTitle(title)
 			        .setMessage(message)
 			        .setNeutralButton("Dismiss", new DialogInterface.OnClickListener() {

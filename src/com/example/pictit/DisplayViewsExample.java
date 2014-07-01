@@ -157,6 +157,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
     boolean mShowGrid = false;
 
     private String mShowWarningMenuItem = null;
+    private boolean mOOMAlready = false;
 
     private Handler mHandler = new Handler(Looper.getMainLooper()) {
             public void handleMessage (Message msg) {
@@ -1333,6 +1334,11 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
                 try {
                     return getPicture(path);
                 } catch (OutOfMemoryError e) {
+                    if (!mOOMAlready) {
+                        mShowWarningMenuItem = "ERROR: Sorry! Unable to display complete results due to memory issues.";
+                        invalidateOptionsMenu();
+                        mOOMAlready = true;
+                    }
                     //Log.e("Map", "DisplayView - Out Of Memory Error " + e.getLocalizedMessage());
                     /*try {
                            android.os.Debug.dumpHprofData("/sdcard/dump.hprof");
