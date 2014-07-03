@@ -1,4 +1,4 @@
-package com.example.pictit;
+package com.app.spicit;
 
 import java.sql.Date;
 import java.text.ParseException;

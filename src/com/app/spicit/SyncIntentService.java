@@ -1,4 +1,4 @@
-package com.example.pictit;
+package com.app.spicit;
 
 import android.app.IntentService;
 import android.content.Intent;

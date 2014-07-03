@@ -1,4 +1,4 @@
-package com.example.pictit;
+package com.app.spicit;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -17,7 +17,6 @@ public class AlertDialogFrag extends Activity {
         ((TextView)tv).setText("Alert!");
     }
 
-
     void showDialog() {
         DialogFragment newFragment = AlertDialogFragment.newInstance(
                 "alert_dialog", null);
@@ -34,6 +33,7 @@ public class AlertDialogFrag extends Activity {
 			frag.setArguments(args);
 			return frag;
         }
+
         public Dialog onCreateDialog(Bundle savedInstanceState) {
 			String title = getArguments().getString("title");
 			String message = getArguments().getString("message");
@@ -44,10 +44,10 @@ public class AlertDialogFrag extends Activity {
 			        .setNeutralButton("Dismiss", new DialogInterface.OnClickListener() {
 			            public void onClick(DialogInterface dialog, int id) {
 			                //query_date = now_date;
-			                    dialog.dismiss();
-			                }
-			            })
-			            .create();
-			   }
+			                 dialog.dismiss();
+			            }
+			        })
+			        .create();
+			}
     }
 }

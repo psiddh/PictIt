@@ -1,6 +1,6 @@
 // Credits: http://android-er.blogspot.in/2010/01/convert-exif-gps-info-to-degree-format.html
 
-package com.example.pictit;
+package com.app.spicit;
 
 import java.io.IOException;
 import java.util.List;

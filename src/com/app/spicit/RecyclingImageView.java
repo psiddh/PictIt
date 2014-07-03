@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.example.pictit;
+package com.app.spicit;
 
 import android.content.Context;
 import android.graphics.drawable.Drawable;
@@ -24,7 +24,7 @@ import android.util.Log;
 import android.widget.Checkable;
 import android.widget.ImageView;
 
-import com.example.pictit.RecyclingBitmapDrawable;
+import com.app.spicit.RecyclingBitmapDrawable;
 
 /**
  * Sub-class of ImageView which automatically notifies the drawable when it is

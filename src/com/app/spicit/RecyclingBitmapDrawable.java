@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.example.pictit;
+package com.app.spicit;
 
 import android.content.res.Resources;
 import android.graphics.Bitmap;

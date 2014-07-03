@@ -1,4 +1,4 @@
-package com.example.pictit;
+package com.app.spicit;
 
 // TBD: Use well-known NLP cloud based APIs for named entity recognition
 // For now lets use this dumb version

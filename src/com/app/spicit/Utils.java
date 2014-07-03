@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.example.pictit;
+package com.app.spicit;
 
 import android.annotation.TargetApi;
 import android.os.Build;
@@ -44,8 +44,8 @@ public class Utils {
             if (Utils.hasHoneycomb()) {
                 threadPolicyBuilder.penaltyFlashScreen();
                 vmPolicyBuilder
-                        .setClassInstanceLimit(DisplayViewsExample.class, 1)
-                        .setClassInstanceLimit(DisplayViewsExample.class, 1);
+                        .setClassInstanceLimit(ResultsView.class, 1)
+                        .setClassInstanceLimit(ResultsView.class, 1);
             }
             StrictMode.setThreadPolicy(threadPolicyBuilder.build());
             StrictMode.setVmPolicy(vmPolicyBuilder.build());

@@ -1,5 +1,4 @@
-package com.example.pictit;
-
+package com.app.spicit;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -8,8 +7,8 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 
-import com.example.pictit.AlertDialogFrag.AlertDialogFragment;
-import com.example.pictit.DataBaseManager.SyncState;
+import com.app.spicit.AlertDialogFrag.AlertDialogFragment;
+import com.app.spicit.DataBaseManager.SyncState;
 
 import android.app.ActionBar;
 import android.app.Activity;
@@ -65,8 +64,8 @@ import android.widget.Toast;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ViewSwitcher;
 import android.app.ActivityManager;
-public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cursor>, LogUtils {
-    private String TAG = "SpikIt> DisplayView";
+public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, LogUtils {
+    private String TAG = "SpikIt> ResultsView";
     // CPU & connectivity data intensive operation guarded by this flag
     private boolean mSupportGeoCoder = true;
 
@@ -384,7 +383,7 @@ public class DisplayViewsExample extends Activity implements LoaderCallbacks<Cur
         //mDisplayImages.setSelector(getResources().getDrawable(R.drawable.selector_grid));
         //mDisplayImages.setVerticalSpacing(1);
         //mDisplayImages.setHorizontalSpacing(1);
-        //mDisplayImages.setOnItemClickListener(DisplayViewsExample.this);
+        //mDisplayImages.setOnItemClickListener(ResultsView.this);
         mDisplayImages.setOnItemClickListener(new OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent,
             View v, int position, long id)
@@ -1339,7 +1338,7 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
                         invalidateOptionsMenu();
                         mOOMAlready = true;
                     }
-                    //Log.e("Map", "DisplayView - Out Of Memory Error " + e.getLocalizedMessage());
+                    //Log.e("Map", "ResultsView - Out Of Memory Error " + e.getLocalizedMessage());
                     /*try {
                            android.os.Debug.dumpHprofData("/sdcard/dump.hprof");
                          }

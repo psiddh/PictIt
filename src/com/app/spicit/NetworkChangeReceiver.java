@@ -1,4 +1,4 @@
-package com.example.pictit;
+package com.app.spicit;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -19,7 +19,7 @@ public class NetworkChangeReceiver extends BroadcastReceiver {
 			Thread thread = new Thread() {
 			    @Override
 			    public void run() {
-			    	mDbHelper.startSync();
+                    mDbHelper.startSync();
 			    }
 			};
 

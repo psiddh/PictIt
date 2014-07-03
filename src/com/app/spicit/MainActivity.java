@@ -1,10 +1,10 @@
-package com.example.pictit;
+package com.app.spicit;
 
 import java.io.IOException;
 import java.util.ArrayList;
 
-import com.example.pictit.AlertDialogFrag.AlertDialogFragment;
-import com.example.pictit.DataBaseManager.SyncState;
+import com.app.spicit.AlertDialogFrag.AlertDialogFragment;
+import com.app.spicit.DataBaseManager.SyncState;
 
 import android.media.ExifInterface;
 import android.os.Bundle;
@@ -132,7 +132,7 @@ public class MainActivity extends Activity {
                     //success handling
                     Bundle b = msg.getData();
                     String filter = b.getString("filter");
-                    Intent intent = new Intent(getBaseContext(), DisplayViewsExample.class);
+                    Intent intent = new Intent(getBaseContext(), ResultsView.class);
                     intent.putExtra("filter", filter);
                     startActivity(intent);
                     break;
