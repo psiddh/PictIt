@@ -17,7 +17,7 @@ import android.util.Pair;
 
 public class UserFilterAnalyzer implements LogUtils{
 
-    private String TAG = "SpikIt> UserFilterAnalyzer";
+    private String TAG = "SpickIt> UserFilterAnalyzer";
 
     private int   SINGLE_DAY_OFFSET_IN_MS = 86400000;
 
@@ -231,6 +231,7 @@ public class UserFilterAnalyzer implements LogUtils{
         mDateRangeKeyWord.put("boxing day",new Integer[] {KEYWORD_PHRASES, PHRASE_BOXING_DAY});
         mDateRangeKeyWord.put("new years",new Integer[] {KEYWORD_PHRASES, PHRASE_NEWYEAR});
         mDateRangeKeyWord.put("new year",new Integer[] {KEYWORD_PHRASES, PHRASE_NEWYEAR});
+        mDateRangeKeyWord.put("new year's day",new Integer[] {KEYWORD_PHRASES, PHRASE_NEWYEAR});
         mDateRangeKeyWord.put("new years eve",new Integer[] {KEYWORD_PHRASES, PHRASE_NEWYEARS_EVE});
         mDateRangeKeyWord.put("new year eve",new Integer[] {KEYWORD_PHRASES, PHRASE_NEWYEARS_EVE});
         //mDateRangeKeyWord.put("christmas and new year",new Integer[] {KEYWORD_PHRASES, PHRASE_CHRISTMAS_AND_NEWYEAR});
@@ -247,7 +248,7 @@ public class UserFilterAnalyzer implements LogUtils{
         mWords = mUserFilter.split("\\s+");
         if (DEBUG) {
             for (int i = 0; i < mWords.length; i++) {
-              Log.d(TAG, "Word "+ i+1 + " :" + mWords[i]);
+                if (DEBUG) Log.d(TAG, "Word "+ i+1 + " :" + mWords[i]);
             }
         }
         for (int i = 0; i < mWords.length; i++) {

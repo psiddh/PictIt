@@ -44,7 +44,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ViewSwitcher.ViewFactory;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements LogUtils {
     private static final int VOICE_RECOGNITION_REQUEST_CODE = 1001;
     private static final int SHOW_GRID_AFTER_DELAY = 1002;
     private static final int GRID_DISPLAY_DELAY = 3000;
@@ -54,7 +54,7 @@ public class MainActivity extends Activity {
     private ProgressBar mProgress;
     private EditText mEditText;
     ImageButton mImgButton = null;
-    private String TAG = "SpikIt> MainView";
+    private String TAG = "SpickIt> MainView";
 
     private Handler mTextSwictherHandler = new Handler() {
         public void handleMessage (Message msg) {
@@ -109,7 +109,7 @@ public class MainActivity extends Activity {
                           "Click mic icon and SAY something like... OR simply TYPE, \"Boxing Day\"",
                           "Click mic icon and SAY something like... OR simply TYPE, \"last week\"",
                           "Click mic icon and SAY something like... OR simply TYPE, \"this week\"",
-                          "Click mic icon and SAY something like... OR simply TYPE, \"NewYear\"",
+                          "Click mic icon and SAY something like... OR simply TYPE, \"New Year's day\"",
                           "Click mic icon and SAY something like... OR simply TYPE, \"Christmas Eve\"",
                           "Click mic icon and SAY something like... OR simply TYPE, \"last weekend\"",
                           "Click mic icon and SAY something like... OR simply TYPE, \"last couple of weeks\"",
@@ -408,7 +408,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main1);
+        setContentView(R.layout.main_activity);
         // Nah! don't do this as well
         //setupDrawers();
         setupTextSwitcher();
@@ -511,8 +511,8 @@ public class MainActivity extends Activity {
         }
 
         String dateString = intf.getAttribute(ExifInterface.TAG_DATETIME);
-           Log.d(TAG, path);
-           Log.d(TAG, dateString);
+        if (DEBUG) Log.d(TAG, path);
+        if (DEBUG) Log.d(TAG, dateString);
            if (intf.hasThumbnail()) {
                byte[] thumbnail = intf.getThumbnail();
                LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);

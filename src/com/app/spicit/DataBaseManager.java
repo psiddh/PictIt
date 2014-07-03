@@ -23,7 +23,7 @@ import android.support.v4.content.LocalBroadcastManager;
 
 public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
 
-  private static String TAG = "SpikIt> DataBaseManager";
+  private static String TAG = "SpickIt> DataBaseManager";
   public static final String TABLE_GALLERY = "gallery";
   public static final String COLUMN_ID = "_id";
   public static final String PICTURE_ID = "pict_id";
@@ -134,9 +134,9 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
           values.put(PICTURE_LONG, longi);
           long val = mDataBase.insert(TABLE_GALLERY, null, values);
           if (-1 == val)
-              Log.d(TAG, "Failed to Insert Row");
+              if (DEBUG) Log.d(TAG, "Failed to Insert Row");
           else
-              Log.d(TAG, "XXX Succesfully  Inserted Row : " + place + " " + country + " " + admin );
+              if (DEBUG) Log.d(TAG, "XXX Succesfully  Inserted Row : " + place + " " + country + " " + admin );
       }
 
       private boolean checkIfPictureExists(int pict_id, String place) {
@@ -223,7 +223,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
               if ((mConnectivityManager.getActiveNetworkInfo() == null) ||
                    !(mConnectivityManager.getActiveNetworkInfo().isConnectedOrConnecting())) {
                   // mConnectivityManager.getActiveNetworkInfo() being null happens in airplane mode I guess
-                  Log.d(TAG,"Ooops No Connection.. Try Later");
+                  if (DEBUG) Log.d(TAG,"Ooops No Connection.. Try Later");
                   isInCompleteFlg = true;
                   continue;
               }
@@ -318,7 +318,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
 
       public void startSync() {
           if (state == SyncState.SYNC_STATE_INPROGRESS) {
-              Log.d(TAG,"SYNC ALREADY IN PROGRESS. DO NOT PERFOMR SYNC ANOTHER TIME");
+              if (DEBUG) Log.d(TAG,"SYNC ALREADY IN PROGRESS. DO NOT PERFOMR SYNC ANOTHER TIME");
               return;
           }
           // which image properties are we querying
@@ -342,7 +342,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
                           ""          // Ordering
                           );
 
-          Log.i(TAG," query count="+cur.getCount());
+          if (DEBUG) Log.i(TAG," query count="+cur.getCount());
 
           if (cur.moveToFirst()) {
               mId = cur.getColumnIndex(
@@ -360,7 +360,7 @@ public class DataBaseManager extends SQLiteOpenHelper implements LogUtils {
               mDataColumn = cur.getColumnIndex(
                       MediaStore.Images.Media.DATA);
 
-              Log.d(TAG, cur.getPosition() + " : " + mDataColumn );
+              if (DEBUG) Log.d(TAG, cur.getPosition() + " : " + mDataColumn );
               performSync(cur);
           }
       }

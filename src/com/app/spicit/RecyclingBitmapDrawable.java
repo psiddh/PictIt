@@ -19,7 +19,6 @@ package com.app.spicit;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
-import android.util.Log;
 
 //import com.example.android.common.logger.Log;
 //import com.example.android.displayingbitmaps.BuildConfig;
@@ -37,7 +36,6 @@ public class RecyclingBitmapDrawable extends BitmapDrawable {
     private int mDisplayRefCount = 0;
 
     private boolean mHasBeenDisplayed  = false;
-    private int where =0;
 
     public RecyclingBitmapDrawable(Resources res, Bitmap bitmap) {
         super(res, bitmap);
@@ -69,9 +67,8 @@ public class RecyclingBitmapDrawable extends BitmapDrawable {
      *
      * @param isCached - Whether the drawable is being cached or not
      */
-    public void setIsCached(boolean isCached, int where) {
+    public void setIsCached(boolean isCached) {
         //Log.d(TAG, "isCached is ::  " +  isCached);
-        this.where = where;
         synchronized (this) {
             if (isCached) {
                 mCacheRefCount++;
@@ -86,14 +83,8 @@ public class RecyclingBitmapDrawable extends BitmapDrawable {
     }
 
     private synchronized void checkState() {
-        if (this.where  == 1)
-            Log.d(TAG,"Recycle ? Display : " + (mDisplayRefCount) + " Cache : " + (mCacheRefCount) + "mHasBeenDisplayed  " + mHasBeenDisplayed + "  " + hasValidBitmap());
         if (mCacheRefCount <= 0 && mDisplayRefCount <= 0 && mHasBeenDisplayed
                 && hasValidBitmap()) {
-            //if (BuildConfig.DEBUG) {
-                Log.d(TAG, "YESSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS RECYCLING    No longer being used or cached so recycling. "
-                        + toString());
-            //}
             Bitmap bitmap = getBitmap();
             bitmap.recycle();
             bitmap = null;

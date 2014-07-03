@@ -20,7 +20,6 @@ import android.content.Context;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.widget.Checkable;
 import android.widget.ImageView;
 
@@ -66,7 +65,7 @@ public class RecyclingImageView extends ImageView implements Checkable{
     protected void onDetachedFromWindow() {
         // This has been detached from Window, so clear the drawable
         setImageDrawable(null);
-        Log.d(TAG, "In onDetachedFromWindow");
+        //Log.d(TAG, "In onDetachedFromWindow");
         super.onDetachedFromWindow();
     }
 

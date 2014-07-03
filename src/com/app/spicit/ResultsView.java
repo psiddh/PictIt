@@ -65,7 +65,7 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ViewSwitcher;
 import android.app.ActivityManager;
 public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, LogUtils {
-    private String TAG = "SpikIt> ResultsView";
+    private String TAG = "SpickIt> ResultsView";
     // CPU & connectivity data intensive operation guarded by this flag
     private boolean mSupportGeoCoder = true;
 
@@ -76,6 +76,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
     int dataColumn = 0;
     int mCurrIndex = 0;
     int mGridCount = 0;
+    int mScrollTo = 0;
 
     Calendar mCalendar = Calendar.getInstance((Locale.getDefault()));
     private ShareActionProvider mShareActionProvider;
@@ -474,7 +475,6 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
         //setupImageView();
     }
 
-
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
     }
@@ -491,7 +491,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
                     MediaStore.Images.Media.TITLE);
             dataColumn = cur.getColumnIndex(
                     MediaStore.Images.Media.DATA);
-            Log.d(TAG, cur.getPosition() + " : " + dateColumn );
+            if (DEBUG) Log.d(TAG, cur.getPosition() + " : " + dateColumn );
         }
     }
 
@@ -540,6 +540,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         mDisplayImages.setNumColumns(newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE ? 3 : 2);
+        mDisplayImages.setSelection(mScrollTo);
         super.onConfigurationChanged(newConfig);
     }
 
@@ -560,7 +561,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
 
     private Intent createCheckedItemsIntent() {
         int selectCount = mDisplayImages.getCheckedItemCount();
-        Log.d(TAG, "Selected Items " + selectCount);
+        if (DEBUG) Log.d(TAG, "Selected Items " + selectCount);
         if (selectCount > 0) {
             Intent shareIntent = new Intent();
             shareIntent.setAction(Intent.ACTION_SEND_MULTIPLE);
@@ -694,7 +695,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
                 if (RecyclingBitmapDrawable.class.isInstance(value)) {
                     // The removed entry is a recycling drawable, so notify it
                     // that it has been added into the memory cache
-                    ((RecyclingBitmapDrawable) value).setIsCached(true, 0);
+                    ((RecyclingBitmapDrawable) value).setIsCached(true);
                 }
                 if (getBitmapFromMemCache(data) == null)
                     mMemoryCache.put(data, value);
@@ -713,7 +714,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
         public void clearCache() {
             if (mMemoryCache != null) {
                 mMemoryCache.evictAll();
-                Log.d(TAG, "Memory cache cleared");
+                if (DEBUG) Log.d(TAG, "Memory cache cleared");
             }
         }
 
@@ -729,14 +730,13 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
 
 
                 protected void entryRemoved( boolean evicted, String key, BitmapDrawable oldValue, BitmapDrawable newValue ) {
-                    Log.d(TAG, "Entry Removed with key " + key + " evicted : " + evicted);
+                    if (DEBUG) Log.d(TAG, "Entry Removed with key " + key + " evicted : " + evicted);
                     if (RecyclingBitmapDrawable.class.isInstance(oldValue)) {
                         // The removed entry is a recycling drawable, so notify it
                         // that it has been removed from the memory cache
-                        ((RecyclingBitmapDrawable) oldValue).setIsCached(false, 1);
+                        ((RecyclingBitmapDrawable) oldValue).setIsCached(false);
                     }
                   }
-
             };
         }
 
@@ -772,7 +772,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
                 //l = new CheckableLayout(mContext);
                 imageView = new RecyclingImageView(mContext);
                 //imageView.setLayoutParams(new GridView.LayoutParams(240, 240));
-                imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                imageView.setPadding(4, 4, 4, 4);
                 //imageView = new ImageView(mContext);
                 //l.addView(imageView);
             } else {
@@ -780,17 +780,17 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
                 //imageView = (RecyclingImageView) l.getChildAt(0);
                 imageView = (ImageView) convertView;
             }
-
+            imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
             BitmapDrawable drawable = getBitmapFromMemCache(position+"");
             if (drawable!= null && !drawable.getBitmap().isRecycled()) {
                imageView.setImageDrawable(drawable);
-               imageView.setPadding(4, 4, 4, 4);
             }
             if (drawable == null) {
                     BitmapWorkerTask task = new BitmapWorkerTask(imageView);
                     task.execute(position+"");
 
             }
+            mScrollTo = mDisplayImages.getFirstVisiblePosition();
              return imageView;
         }
     }
@@ -1039,8 +1039,10 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
                         "TIP 1: If you are trying to filter your pictures by 'places' / 'place' where the pictures have been taken, " +
                         "Please ensure that your 'camera' pictures were GeoTagged (at the time of taking the picture(s)) in order to successfully search by 'places' \n\n " +
                          "TIP 2: Please ensure that 'voice command to text' translation of dates and places has happened properly \n\n"+
-                         "TIP 3: When the voice filters are applied in the form of 'dates' / 'date ranges' / 'place' , Please ensure that pictures have the respective meta-data (timestamp , place) associated with it.\n\n" +
-                         "TIP 4: Note that filters are ONLY applied to 'camera' pictures in the photo Albums.";
+                         "TIP 3: Please ensure that pictures have been indeed taken on the specified 'date / month / date range' or 'place' by checking your Gallery / Photo albums\n\n" +
+                         "TIP 4: Note that filters are ONLY applied to 'camera' pictures in the photo albums.\n\n" +
+                         "TIP 5: There is no need to form a complete sentence. Apply search filters by merely saying the 'date' on which pictures have been taken " +
+                         "(or) 'place' at which they have been taken. For more clues just look at the First Activity / Screen's text animation. ";
             }
             setProgressBarIndeterminateVisibility(false);
             if (mShowWarningMenuItem != null) {
@@ -1229,8 +1231,8 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
                    if ((mConnectivityManager.getActiveNetworkInfo() == null) ||
                       !(mConnectivityManager.getActiveNetworkInfo().isConnectedOrConnecting())) {
                       // mConnectivityManager.getActiveNetworkInfo() being null happens in airplane mode I guess
-                      Log.d(TAG,"Ooops No Connection.. Try Later");
-                      mShowWarningMenuItem = "Warning: You may see Inconsistent / Incorrect Results. \n\n" +
+                       if (DEBUG) Log.d(TAG,"Ooops No Connection.. Try Later");
+                       mShowWarningMenuItem = "Warning: You may see Inconsistent / Incorrect Results. \n\n" +
                               "Probable Reason: Check your internet connection! It looks like there is no active data connection. ";
                       continue;
                    }
@@ -1264,7 +1266,8 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
                        // TODO Auto-generated catch block
                        //e.printStackTrace();
                        mShowWarningMenuItem = "Warning: You may see Inconsistent / Incorrect Results. \n\n" +
-                                 "Probable Reason:  Geocoding / Reverse Geocoding Service was not available partially for a few / all pictures. As a result, such pictures cannot be displayed in the grid view. Please retry again later if you see incomplete results. \n\n" +
+                                 "Probable Reason:  Geocoding / Reverse Geocoding Service was not available partially for a few / all pictures. As a result, such pictures if filtered / searched by 'place' may not be displayed in the results view. Please retry again later if you see incomplete results. " +
+                                 "However note that search by dates should not have any issues. \n\n" +
                                  "TIP: If the issue persists, (Though not ideal!) please consider rebooting the device. This issue is outside the scope of the application";
                    }
                    String locality = null;
@@ -1334,7 +1337,8 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
                     return getPicture(path);
                 } catch (OutOfMemoryError e) {
                     if (!mOOMAlready) {
-                        mShowWarningMenuItem = "ERROR: Sorry! Unable to display complete results due to memory issues.";
+                        mShowWarningMenuItem = "ERROR: Sorry! Unable to display complete results due to memory issues.\n\n" +
+                                               " This app is still in alpha stage! We will soon provide an update to address this issue. Apologies once again!";
                         invalidateOptionsMenu();
                         mOOMAlready = true;
                     }

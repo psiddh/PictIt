@@ -2,26 +2,7 @@
 <resources>
 
     <string name="app_name">SpickiT</string>
-    <string name="action_settings">Settings</string>
-    <string name="discover_peers_button">Discover</string>
-    <string name="connect_peer_button">Connect</string>
-    <string name="disconnect_peer_button">Disconnect</string>
-    <string name="get_file_button">Send >>> </string>
-    <string name="empty"></string>
-    <string name="desc"></string>
-    <string name="yes">yes</string>
-    <string name="no">no</string>
      <string name="Go">Good to go</string>
      <string name="done">done</string>
-    
-    <string-array name="events_array">
-        <item>Create </item>
-        <item>Delete </item>
-        <item>Pick</item>
-    </string-array>
-    <string name="drawer_open">Open Event drawer</string>
-    <string name="drawer_close">Close Event drawer</string>
-    <string name="action_websearch">Web search</string>
-    <string name="app_not_available">Sorry, there\'s no web browser available</string>
 
 </resources>

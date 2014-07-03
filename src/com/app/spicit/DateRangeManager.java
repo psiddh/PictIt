@@ -11,7 +11,7 @@ import android.util.Pair;
 
 public class DateRangeManager implements LogUtils{
 
-    private String TAG = "SpikIt> DateRangeManage";
+    private String TAG = "SpickIt> DateRangeManage";
     Calendar Cal = null;
     //private int mCurDayOfWeek = -1;
     private int mYear = -1;
