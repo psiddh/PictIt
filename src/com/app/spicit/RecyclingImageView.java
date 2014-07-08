@@ -19,6 +19,7 @@ package com.app.spicit;
 import android.content.Context;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
+import android.os.Build;
 import android.util.AttributeSet;
 import android.widget.Checkable;
 import android.widget.ImageView;
@@ -42,12 +43,20 @@ public class RecyclingImageView extends ImageView implements Checkable{
         super(context, attrs);
     }
 
-    public void setChecked(boolean checked) {
+    @SuppressWarnings("deprecation")
+	public void setChecked(boolean checked) {
         mChecked = checked;
+        Drawable drawable = null;
         if (checked) {
-          setBackground(getResources().getDrawable(R.drawable.bggrid));
+           drawable = getResources().getDrawable(R.drawable.bggrid);
         } else {
-            setBackground(null);
+            drawable = null;
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+            setBackground(drawable);
+        } else {
+            setBackgroundDrawable(drawable);
         }
     }
 

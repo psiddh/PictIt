@@ -81,7 +81,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
     Calendar mCalendar = Calendar.getInstance((Locale.getDefault()));
     private ShareActionProvider mShareActionProvider;
 
-    String mUserFilter;
+    String mUserFilter = "";
 
     DateRangeManager mRangeMgr = new DateRangeManager();
 
@@ -200,7 +200,8 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
 
         Intent intent = getIntent();
         String filter = intent.getExtras().getString("filter");
-        mUserFilter = filter;
+        if (filter != null)
+            mUserFilter = filter;
         mAnalyzer = new UserFilterAnalyzer(this, filter);
         mPairRange = mAnalyzer.getDateRange(mUserFilter);
         String title = getTitleFromPair(mPairRange);
@@ -1036,8 +1037,8 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
                 txtView.setText("Sorry! No results found. Try again ...");
 
                 mShowWarningMenuItem = "Zilch! Please consider the following tips in order to see the desired results \n\n" +
-                        "TIP 1: If you are trying to filter your pictures by 'places' / 'place' where the pictures have been taken, " +
-                        "Please ensure that your 'camera' pictures were GeoTagged (at the time of taking the picture(s)) in order to successfully search by 'places' \n\n " +
+                         "TIP 1: If you are trying to filter your pictures by 'places' / 'place' where the pictures have been taken, " +
+                             "Please ensure that your 'camera' pictures were GeoTagged (at the time of taking the picture(s)) in order to successfully search by 'places' \n\n " +
                          "TIP 2: Please ensure that 'voice command to text' translation of dates and places has happened properly \n\n"+
                          "TIP 3: Please ensure that pictures have been indeed taken on the specified 'date / month / date range' or 'place' by checking your Gallery / Photo albums\n\n" +
                          "TIP 4: Note that filters are ONLY applied to 'camera' pictures in the photo albums.\n\n" +
@@ -1150,14 +1151,17 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
                                    break;
                                }
                                placeFound  = placeList.get(0);
+                               if (placeFound == null) placeFound = ""; // To avoid the crash!
                                if (placeList != null && placeList.size() < 2) {
                                   break;
                                }
                                countryFound  = placeList.get(1);
+                               if (countryFound == null) countryFound = ""; // To avoid the crash!
                                if (placeList != null && placeList.size() < 3) {
                                   break;
                                }
                                adminAreaFound  = placeList.get(2);
+                               if (adminAreaFound == null) adminAreaFound = ""; // To avoid the crash!
                        } while (false);
 
                        if (mDbHelper.isAtleastSingleValuePresentInList(placeList) == false) {
@@ -1266,7 +1270,7 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
                        // TODO Auto-generated catch block
                        //e.printStackTrace();
                        mShowWarningMenuItem = "Warning: You may see Inconsistent / Incorrect Results. \n\n" +
-                                 "Probable Reason:  Geocoding / Reverse Geocoding Service was not available partially for a few / all pictures. As a result, such pictures if filtered / searched by 'place' may not be displayed in the results view. Please retry again later if you see incomplete results. " +
+                                 "Probable Reason:  Geocoding / Reverse Geocoding Service was not available partially for a few / all pictures. As a result, such pictures if filtered / searched by 'place' may not be displayed in the results grid view. Please retry again later if you see incomplete results. " +
                                  "However note that search by dates should not have any issues. \n\n" +
                                  "TIP: If the issue persists, (Though not ideal!) please consider rebooting the device. This issue is outside the scope of the application";
                    }
