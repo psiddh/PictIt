@@ -151,7 +151,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
 
     Display mDisplay;
     DisplayMetrics mOutMetrics;
-    float mDensity;
+    //float mDensity;
 
     ViewSwitcher mViewSwitcher;
     boolean mShowGrid = false;
@@ -219,7 +219,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
         Display mDisplay = wm.getDefaultDisplay();
         mOutMetrics= new DisplayMetrics ();
         mDisplay.getMetrics(mOutMetrics);
-        mDensity = this.getResources().getDisplayMetrics().density;
+        //mDensity = this.getResources().getDisplayMetrics().density;
         mViewSwitcher.setBackgroundColor(Color.DKGRAY);
 
         setupViews();
@@ -877,8 +877,8 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
             return null;
         }
         //mDisplay.getMetrics(mOutMetrics);
-        float dpHeight = mOutMetrics.heightPixels / mDensity;
-        float dpWidth  = mOutMetrics.widthPixels / mDensity;
+        float dpHeight = mOutMetrics.heightPixels / 2;
+        float dpWidth  = mOutMetrics.widthPixels / 2;
         int width=(int) (dpWidth);
         int height=(int) (dpHeight);
         if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE ) {
