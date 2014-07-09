@@ -29,13 +29,18 @@
 
 <FrameLayout
     android:orientation="vertical"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent">
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
    <GridView
        android:id="@+id/gridview"
-       android:layout_width="fill_parent"
-       android:layout_height="fill_parent"
+       android:layout_width="match_parent"
+       android:layout_height="match_parent"
+       android:verticalSpacing="0dp"
+       android:horizontalSpacing="0dp"
+       android:stretchMode="columnWidth"
+       android:adjustViewBounds="true"
        android:numColumns="@integer/grid_rows"
+       android:scaleType="fitCenter"
    />
 
 </FrameLayout>

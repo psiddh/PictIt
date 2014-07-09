@@ -781,7 +781,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
                 //imageView = (RecyclingImageView) l.getChildAt(0);
                 imageView = (ImageView) convertView;
             }
-            imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            //imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
             BitmapDrawable drawable = getBitmapFromMemCache(position+"");
             if (drawable!= null && !drawable.getBitmap().isRecycled()) {
                imageView.setImageDrawable(drawable);
@@ -1343,7 +1343,12 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
                     if (!mOOMAlready) {
                         mShowWarningMenuItem = "ERROR: Sorry! Unable to display complete results due to memory issues.\n\n" +
                                                " This app is still in alpha stage! We will soon provide an update to address this issue. Apologies once again!";
-                        invalidateOptionsMenu();
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                invalidateOptionsMenu();
+                            }
+                        });
                         mOOMAlready = true;
                     }
                     //Log.e("Map", "ResultsView - Out Of Memory Error " + e.getLocalizedMessage());

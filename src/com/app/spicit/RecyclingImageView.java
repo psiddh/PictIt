@@ -44,7 +44,7 @@ public class RecyclingImageView extends ImageView implements Checkable{
     }
 
     @SuppressWarnings("deprecation")
-	public void setChecked(boolean checked) {
+    public void setChecked(boolean checked) {
         mChecked = checked;
         Drawable drawable = null;
         if (checked) {
