@@ -42,8 +42,6 @@ import android.util.LruCache;
 import android.util.Pair;
 import android.util.SparseBooleanArray;
 import android.view.ActionMode;
-import android.view.ContextMenu;
-import android.view.ContextMenu.ContextMenuInfo;
 import android.view.Display;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -52,7 +50,6 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.BaseAdapter;
 import android.widget.Checkable;
 import android.widget.FrameLayout;
@@ -137,8 +134,6 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
 
     SelectState mState = SelectState.NONE;
     private static final int SELECT_ALL_ITEMS = 1001;
-    boolean mClickStateOnGridItemAShortPress = true;
-
     private UserFilterAnalyzer mAnalyzer;
 
     private AsyncTask<Object, Bitmap, Object> mLoadImagesInBackground = null;
@@ -157,6 +152,8 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
     boolean mShowGrid = false;
 
     private String mShowWarningMenuItem = null;
+    private String mShowToastMsg = "Ooops! You may see incorrect or inconsistent results. For more details click 'info' menu item";
+    private boolean bShowToastMsg = true;
     private boolean mOOMAlready = false;
 
     private Handler mHandler = new Handler(Looper.getMainLooper()) {
@@ -356,16 +353,6 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
        super.onDestroy();
     }
 
-     // Our handler for received Intents. This will be called whenever an Intent
-     // with an action named "custom-event-name" is broadcasted.
-     /*private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
-       @Override
-       public void onReceive(Context context, Intent intent) {
-         // Get extra data included in the Intent
-         String message = intent.getStringExtra("message");
-         Log.d("receiver", "Got message: " + message);
-       }
-     };*/
     /**
      * Setup the grid view.
      */
@@ -377,23 +364,13 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
         mDisplayImages.setChoiceMode(GridView.CHOICE_MODE_MULTIPLE_MODAL);
         mDisplayImages.setMultiChoiceModeListener(new MultiChoiceModeListener());
         mDisplayImages.setDrawSelectorOnTop(true);
-        //setupTextSwitcher();
-        //mDisplayImages.setNumColumns(metrics.widthPixels/200);
-        //mDisplayImages.setNumColumns(3);
-        //mDisplayImages.setClipToPadding(false);
-        // Make GridView use your custom selector drawable
-        //mDisplayImages.setSelector(getResources().getDrawable(R.drawable.selector_grid));
-        //mDisplayImages.setVerticalSpacing(1);
-        //mDisplayImages.setHorizontalSpacing(1);
-        //mDisplayImages.setOnItemClickListener(ResultsView.this);
         mDisplayImages.setOnItemClickListener(new OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent,
             View v, int position, long id)
             {
-                mClickStateOnGridItemAShortPress = true;
-                Toast.makeText(getBaseContext(),
+                /*Toast.makeText(getBaseContext(),
                         "pic" + (position + 1) + " selected",
-                        Toast.LENGTH_SHORT).show();
+                        Toast.LENGTH_SHORT).show();*/
                 Intent intent = new Intent();
                 intent.setAction(Intent.ACTION_VIEW);
                 Uri imageUri = Uri.parse("file://" + mList.get(position));
@@ -401,41 +378,6 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
                 startActivity(intent);
             }
         });
-
-        mDisplayImages.setOnItemLongClickListener(new OnItemLongClickListener() {
-            //this listener should show the context menu for a long click on the gridview.
-            @Override
-            public boolean onItemLongClick(AdapterView<?> parent, View v, int position, long id) {
-                   //return parent.showContextMenuForChild(v);
-                Toast.makeText(getBaseContext(),
-                        "pic" + (position + 1) + " selected - LONG KEY PRESS",
-                        Toast.LENGTH_SHORT).show();
-                mState = SelectState.CHERRY_PICK;
-                mClickStateOnGridItemAShortPress = false;
-                //v.setBackgroundColor(Color.RED);
-                v.animate();
-                v.setPressed(true);
-                //parent.showContextMenuForChild(v);
-                return true;
-
-            }
-        });
-    }
-
-    @Override
-    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
-        //AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) menuInfo;
-
-        if(mClickStateOnGridItemAShortPress) {
-            //getMenuInflater().inflate(R.menu.context_standard, menu);
-            //menu.setHeaderTitle("Standard Menu for "+arr[info.position]);
-            //mClickStateOnGridItemAShortPress = false;
-        }
-        else {
-            mClickStateOnGridItemAShortPress = false;
-            //getMenuInflater().inflate(R.menu.context_options, menu);
-            //menu.setHeaderTitle("Options Menu for "+arr[info.position]);
-        }
     }
 
     @Override
@@ -541,7 +483,15 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         mDisplayImages.setNumColumns(newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE ? 3 : 2);
+        // Set the current grid view
         mDisplayImages.setSelection(mScrollTo);
+
+        // Compute 'mOutMetrics' so that getPicture() can use this value.
+        WindowManager wm = (WindowManager) this.getSystemService(Context.WINDOW_SERVICE);
+        Display mDisplay = wm.getDefaultDisplay();
+        mOutMetrics= new DisplayMetrics ();
+        mDisplay.getMetrics(mOutMetrics);
+
         super.onConfigurationChanged(newConfig);
     }
 
@@ -619,9 +569,6 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
             else
                 state = "Cherry-Pick ";
             mode.setTitle(state + "Mode");
-            //mode.setSubtitle("1 Picture picked");
-            //MenuInflater inflater = getMenuInflater();
-            //inflater.inflate(R.menu.contextual_actions, menu);
 
             // Inflate the menu; this adds items to the action bar if it is present.
             getMenuInflater().inflate(R.menu.menu_select_mode, menu);
@@ -876,7 +823,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
         if(intf == null) {
             return null;
         }
-        //mDisplay.getMetrics(mOutMetrics);
+
         float dpHeight = mOutMetrics.heightPixels / 2;
         float dpWidth  = mOutMetrics.widthPixels / 2;
         int width=(int) (dpWidth);
@@ -1056,24 +1003,6 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
 
         }
 
-
-
-       /* private Bitmap decodeSampledBitmapFromResource(int resId,
-                int reqWidth, int reqHeight) {
-
-            // First decode with inJustDecodeBounds=true to check dimensions
-            final BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inJustDecodeBounds = true;
-            BitmapFactory.decode(res, resId, options);
-
-            // Calculate inSampleSize
-            options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
-
-            // Decode bitmap with inSampleSize set
-            options.inJustDecodeBounds = false;
-            return BitmapFactory.decodeResource(res, resId, options);
-        }*/
-
         Bitmap getImgBasedOnUserFilter(Cursor cur) {
             boolean added = false;
             int dateRangeMatchFound = -1;
@@ -1236,8 +1165,20 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
                       !(mConnectivityManager.getActiveNetworkInfo().isConnectedOrConnecting())) {
                       // mConnectivityManager.getActiveNetworkInfo() being null happens in airplane mode I guess
                        if (DEBUG) Log.d(TAG,"Ooops No Connection.. Try Later");
-                       mShowWarningMenuItem = "Warning: You may see Inconsistent / Incorrect Results. \n\n" +
-                              "Probable Reason: Check your internet connection! It looks like there is no active data connection. ";
+                       if (mDbHelper.getState() == DataBaseManager.SyncState.SYNC_STATE_INPROGRESS) {
+                           mShowWarningMenuItem = "Warning: You may see Inconsistent / Incorrect Results if you are searching by place. \n\n" +
+                                  "Probable Reason: Check your internet connection! It looks like there is no active data connection. ";
+                           runOnUiThread(new Runnable() {
+                               @Override
+                               public void run() {
+                                   if (bShowToastMsg) {
+                                       Toast.makeText(getBaseContext(), mShowToastMsg, Toast.LENGTH_LONG).show();
+                                       bShowToastMsg = false;
+                                       invalidateOptionsMenu();
+                                   }
+                               }
+                           });
+                       }
                       continue;
                    }
                    try {
@@ -1273,6 +1214,16 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
                                  "Probable Reason:  Geocoding / Reverse Geocoding Service was not available partially for a few / all pictures. As a result, such pictures if filtered / searched by 'place' may not be displayed in the results grid view. Please retry again later if you see incomplete results. " +
                                  "However note that search by dates should not have any issues. \n\n" +
                                  "TIP: If the issue persists, (Though not ideal!) please consider rebooting the device. This issue is outside the scope of the application";
+                       runOnUiThread(new Runnable() {
+                           @Override
+                           public void run() {
+                               if (bShowToastMsg) {
+                                   Toast.makeText(getBaseContext(), mShowToastMsg, Toast.LENGTH_LONG).show();
+                                   bShowToastMsg = false;
+                                   invalidateOptionsMenu();
+                               }
+                           }
+                       });
                    }
                    String locality = null;
                    String country = null;
@@ -1346,6 +1297,10 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
+                                if (bShowToastMsg) {
+                                    Toast.makeText(getBaseContext(), mShowToastMsg, Toast.LENGTH_LONG).show();
+                                    bShowToastMsg = false;
+                                }
                                 invalidateOptionsMenu();
                             }
                         });

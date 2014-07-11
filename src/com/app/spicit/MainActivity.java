@@ -164,47 +164,6 @@ public class MainActivity extends Activity implements LogUtils {
           mSwitcher.setText(mTextToShow[random]);
     }
 
-    /*private void drawProgressDots(int index, int color) {
-        int resId = -1;
-        float x = 0;
-        float y = 0;
-        float radius = 50;
-        WindowManager wm = (WindowManager) this.getSystemService(this.WINDOW_SERVICE);
-        Display display = wm.getDefaultDisplay();
-        DisplayMetrics outMetrics = new DisplayMetrics ();
-        display.getMetrics(outMetrics);
-        int xPart = outMetrics.widthPixels / 5;
-        int yPart = outMetrics.heightPixels / 10;
-        display.getMetrics(outMetrics);
-        if (index == 0) {
-            x = xPart * 2;
-            y = yPart * 9;
-            resId = R.id.imgView0;
-        }
-        else if (index == 1) {
-            x = xPart * 3;
-            y = yPart * 9;
-            resId = R.id.imgView1;
-        }
-        else if (index == 2) {
-            x = xPart * 4;
-            y = yPart * 9;
-            resId =  R.id.imgView2;
-        }
-        ImageView drawingImageView = (ImageView) this.findViewById(resId);
-
-        float density  = this.getResources().getDisplayMetrics().density;
-            Bitmap bitmap = Bitmap.createBitmap(outMetrics.widthPixels, outMetrics.heightPixels, Bitmap.Config.ARGB_8888);
-            Canvas canvas = new Canvas(bitmap);
-            drawingImageView.setImageBitmap(bitmap);
-
-            // Circle
-            Paint paint = new Paint();
-            paint.setColor(color);
-            paint.setStyle(Paint.Style.FILL);
-            canvas.drawCircle(x, y, radius, paint);
-    }*/
-
     public void setupTextSwitcher() {
          mSwitcher = (TextSwitcher) findViewById(R.id.textSwitcher);
          // Set the ViewFactory of the TextSwitcher that will create TextView object when asked
@@ -311,47 +270,6 @@ public class MainActivity extends Activity implements LogUtils {
         }
     }*/
 
-   /* public void setupDrawers() {
-        mDrawerTitle = "Manage Events";//getTitle();
-        mPlanetTitles = getResources().getStringArray(R.array.events_array);
-        mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
-        mDrawerList = (ListView) findViewById(R.id.left_drawer);
-
-        // set a custom shadow that overlays the main content when the drawer opens
-        mDrawerLayout.setDrawerShadow(R.drawable.drawer_shadow, GravityCompat.START);
-        //mDrawerLayout.setScrimColor(Color.TRANSPARENT);
-        // set up the drawer's list view with items and click listener
-        mDrawerList.setAdapter(new ArrayAdapter<String>(this,
-                R.layout.drawer_list_item, mPlanetTitles));
-        mDrawerList.setOnItemClickListener(new DrawerItemClickListener());
-        mDrawerList.setBackgroundColor(0xF5F5DC);
-
-        // enable ActionBar app icon to behave as action to toggle nav drawer
-        getActionBar().setDisplayHomeAsUpEnabled(true);
-        getActionBar().setHomeButtonEnabled(true);
-
-        // ActionBarDrawerToggle ties together the the proper interactions
-        // between the sliding drawer and the action bar app icon
-        mDrawerToggle = new ActionBarDrawerToggle(
-                this,                  // host Activity
-                mDrawerLayout,         // DrawerLayout object
-                R.drawable.ic_navigation_drawer,  // nav drawer image to replace 'Up' caret
-                R.string.drawer_open,  // "open drawer" description for accessibility
-                R.string.drawer_close  //"close drawer" description for accessibility
-                ) {
-            public void onDrawerClosed(View view) {
-                getActionBar().setTitle(getTitle());
-                invalidateOptionsMenu(); // creates call to onPrepareOptionsMenu()
-            }
-
-            public void onDrawerOpened(View drawerView) {
-                getActionBar().setTitle(mDrawerTitle);
-                invalidateOptionsMenu(); // creates call to onPrepareOptionsMenu()
-            }
-        };
-        mDrawerLayout.setDrawerListener(mDrawerToggle);
-    }*/
-
     @Override
     protected void onPostCreate(Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
@@ -377,8 +295,8 @@ public class MainActivity extends Activity implements LogUtils {
                     case -2:
                         break;
                     case -1:
-                        msg = "Oops! You may see inconsistent results. \n\n" +
-                              "Probale Reason(s): Either there was no active data connection detected at the time of sync (or) Some Pictures' Geo-Cooridnates have not been decoded properly by GeoCoder service. As a result, filtering by 'place' may yield incomplete results";
+                        msg = "You may see inconsistent results! \n\n" +
+                              "Probale Reason(s): Either there is / was no active data connection detected at the time of sync (or) Some Pictures' Geo-Cooridnates have not been decoded properly by GeoCoder service. As a result, filtering by 'place' may yield incomplete results";
                         break;
                     case 0:
                         msg = "Background Sync Status Completed! \n\nReady to search by 'dates' AND / OR 'places' on your Gallery --> Camera  pictures. \n\n" +
