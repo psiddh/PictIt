@@ -1007,14 +1007,21 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
             boolean added = false;
             int dateRangeMatchFound = -1;
             String path   = null;
+            String curDate = null;
+            long dateinMilliSec = 0;
             do {
                 if (cur.isClosed()) break;
-                String curDate = cur.getString(dateColumn);
+                if (dateColumn != -1) {
+                  curDate = cur.getString(dateColumn);
+                }
                 if (cur.isClosed()) break;
-                path = cur.getString(dataColumn);
+                if (dataColumn != -1) {
+                  path = cur.getString(dataColumn);
+                }
 
-                if (curDate == null) break;
-                long dateinMilliSec = Long.parseLong(curDate);
+                if (curDate == null && curDate == null) break;
+                if (curDate != null)
+                  dateinMilliSec = Long.parseLong(curDate);
                 mCalendar.setTimeInMillis(dateinMilliSec);
                 if (null != mPairRange) {
                    mRangeMgr.printDateAndTime(mCalendar);
@@ -1052,6 +1059,7 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
                    }
                    List<Address> address = null;
                    ExifInterface intf = null;
+                   if (path == null) break;
                    try {
                        intf = new ExifInterface(path);
                    } catch(IOException e) {
@@ -1096,9 +1104,9 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
                        if (mDbHelper.isAtleastSingleValuePresentInList(placeList) == false) {
                            // Place not found in cache or db ,but it has a valid GPS cod-ordinates
                            // Try and fallback on GeoCoder API to retrieve the place.
-                       } else if((mUserFilter.toLowerCase().contains(placeFound.toLowerCase())    ||
-                                 (mUserFilter.toLowerCase().contains(countryFound.toLowerCase())) ||
-                                 (mUserFilter.toLowerCase().contains(adminAreaFound.toLowerCase())))) {
+                       } else if((mUserFilter.toLowerCase().contains(placeFound.toLowerCase()) && (placeFound != ""))    ||
+                                 (mUserFilter.toLowerCase().contains(countryFound.toLowerCase()) && (countryFound != "")) ||
+                                 (mUserFilter.toLowerCase().contains(adminAreaFound.toLowerCase())) && (adminAreaFound != "")) {
                            // Wow... we have the place found either in the cache or db..
                            int index = mPlaceList.indexOf(placeFound.toUpperCase());
                            if (index == -1 && mUserFilter.toLowerCase().contains(placeFound.toLowerCase())) {
