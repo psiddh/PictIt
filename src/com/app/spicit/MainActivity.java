@@ -22,7 +22,10 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.speech.RecognizerIntent;
+import android.support.v4.app.ActionBarDrawerToggle;
 import android.support.v4.content.LocalBroadcastManager;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -54,6 +57,13 @@ public class MainActivity extends Activity implements LogUtils {
     private ProgressBar mProgress;
     private EditText mEditText;
     ImageButton mImgButton = null;
+    
+    private DrawerLayout mDrawerLayout;
+    private ActionBarDrawerToggle mDrawerToggle;
+    
+    private CharSequence mDrawerTitle;
+    private CharSequence mTitle;
+    
     private String TAG = "SpickIt> MainView";
 
     private Handler mTextSwictherHandler = new Handler() {
@@ -147,6 +157,12 @@ public class MainActivity extends Activity implements LogUtils {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         //getMenuInflater().inflate(R.menu.menu_main, menu);
+        if (true) {
+            getMenuInflater().inflate(R.menu.menu_main, menu);
+            MenuItem item = menu.findItem(R.id.menu_item_map);
+            item.setVisible(true);
+        }
+        
         if (mMainMenuStatusDisplay != 0xFF) {
             getMenuInflater().inflate(R.menu.menu_main, menu);
             MenuItem item = menu.findItem(R.id.menu_item_info);
@@ -288,6 +304,12 @@ public class MainActivity extends Activity implements LogUtils {
             case android.R.id.home:
                 onBackPressed();
                 break;
+            case R.id.menu_item_map:
+            	// Launch Map mode
+                Intent intent = new Intent(getBaseContext(), MapFragmentActivity.class);
+                intent.putExtra("filter", "test");
+                startActivity(intent);
+            	break;
             case R.id.menu_item_info:
                 String msg = "Voice filter by 'places' on your Gallery --> Camera pictures may not work due to an unexpected error! \n\n" +
                              "However search by 'dates' or 'date ranges' shall continue to work.";
@@ -326,9 +348,7 @@ public class MainActivity extends Activity implements LogUtils {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.main_activity);
-        // Nah! don't do this as well
-        //setupDrawers();
+        setContentView(R.layout.main_activity);        
         setupTextSwitcher();
         getActionBar().setHomeButtonEnabled(true);
         getActionBar().setDisplayHomeAsUpEnabled(true);

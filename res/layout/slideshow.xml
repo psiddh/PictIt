@@ -1,0 +1,19 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent" >
+
+       
+	    <ViewFlipper 
+	        android:id="@+id/flipper1"
+	        android:layout_width="fill_parent"
+	        android:layout_height="fill_parent"
+	        android:flipInterval="3000"
+	        android:inAnimation="@android:anim/slide_in_left"
+	        android:outAnimation="@android:anim/slide_out_right"	        
+	        >
+
+	    </ViewFlipper>	    
+   
+
+</RelativeLayout>

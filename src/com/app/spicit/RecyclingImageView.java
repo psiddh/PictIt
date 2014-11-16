@@ -16,6 +16,8 @@
 
 package com.app.spicit;
 
+import java.util.Random;
+
 import android.content.Context;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
@@ -35,6 +37,9 @@ public class RecyclingImageView extends ImageView implements Checkable{
     static final String TAG = "SpickiT> RecyclingImageView";
     private boolean mChecked = false;
 
+    private int mDesiredWidth = 600; //getWidth();;
+    private int mDesiredHeight = 400;
+
     public RecyclingImageView(Context context) {
         super(context);
     }
@@ -43,7 +48,6 @@ public class RecyclingImageView extends ImageView implements Checkable{
         super(context, attrs);
     }
 
-    @SuppressWarnings("deprecation")
     public void setChecked(boolean checked) {
         mChecked = checked;
         Drawable drawable = null;
@@ -56,7 +60,8 @@ public class RecyclingImageView extends ImageView implements Checkable{
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
             setBackground(drawable);
         } else {
-            setBackgroundDrawable(drawable);
+        	setBackground(drawable);
+            //setBackgroundDrawable(drawable);
         }
     }
 
@@ -100,7 +105,17 @@ public class RecyclingImageView extends ImageView implements Checkable{
         // Notify old Drawable so it is no longer being displayed
         notifyDrawable(previousDrawable, false);
     }
+    
+    @Override
+    protected void onMeasure(final int widthMeasureSpec, final int heightMeasureSpec) {
+        final int width = getDefaultSize(getSuggestedMinimumWidth(),widthMeasureSpec);
+        setMeasuredDimension(width, width);
+    }
 
+    @Override
+    protected void onSizeChanged(final int w, final int h, final int oldw, final int oldh) {
+        super.onSizeChanged(w, w, oldw, oldh);
+    }
     /**
      * Notifies the drawable that it's displayed state has changed.
      *

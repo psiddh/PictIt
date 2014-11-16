@@ -5,6 +5,12 @@
      android:title="PICK-ALL"
      android:showAsAction="always"
      android:visible="false"/>
+   
+   <item android:id="@+id/slideshow"
+       android:icon="@android:drawable/ic_media_next"
+       android:title="info"
+       android:showAsAction="always"
+       android:visible="false"/>
     
 
 </menu>

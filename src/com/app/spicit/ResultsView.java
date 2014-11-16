@@ -2,6 +2,7 @@ package com.app.spicit;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -10,6 +11,13 @@ import java.util.Locale;
 import com.app.spicit.AlertDialogFrag.AlertDialogFragment;
 import com.app.spicit.DataBaseManager.SyncState;
 
+import android.animation.Animator;
+import android.animation.AnimatorInflater;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
+import android.animation.ValueAnimator.AnimatorUpdateListener;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.Application;
@@ -24,18 +32,24 @@ import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.location.Address;
 import android.media.ExifInterface;
 import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.provider.MediaStore;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.LruCache;
@@ -43,24 +57,49 @@ import android.util.Pair;
 import android.util.SparseBooleanArray;
 import android.view.ActionMode;
 import android.view.Display;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.View.OnClickListener;
+import android.view.View.OnLongClickListener;
+import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
+import android.view.ViewGroup.LayoutParams;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.AlphaAnimation;
+import android.view.animation.Animation;
+import android.view.animation.AnimationSet;
+import android.view.animation.AnimationUtils;
+import android.view.animation.DecelerateInterpolator;
+import android.widget.AbsListView;
+import android.widget.AbsListView.OnScrollListener;
 import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.BaseAdapter;
 import android.widget.Checkable;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.GridView;
+import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.ImageView.ScaleType;
 import android.widget.ShareActionProvider;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.ViewAnimator;
+import android.widget.ViewFlipper;
 import android.widget.ViewSwitcher;
 import android.app.ActivityManager;
+import android.view.animation.Animation.AnimationListener;
+
+
+
 public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, LogUtils {
     private String TAG = "SpickIt> ResultsView";
     // CPU & connectivity data intensive operation guarded by this flag
@@ -79,6 +118,10 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
     private ShareActionProvider mShareActionProvider;
 
     String mUserFilter = "";
+    
+    int[] pictureIds;
+    
+    boolean bMatchPictureIDsOnly = false;
 
     DateRangeManager mRangeMgr = new DateRangeManager();
 
@@ -113,6 +156,12 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
     int cacheSize = 0; //1024 * 1024 * memClass / 8;
 
     private LruCache<String, BitmapDrawable> mMemoryCache = null ; //new LruCache<String, Bitmap>(cacheSize) {
+    ResultViewCallback mCallback;
+    
+    private EditText mEditTextCustomTag;
+    
+    ImageButton mImgButtonAccept;
+    ImageButton mImgButtonCancel;
 
     /**
      * Grid view holding the images.
@@ -141,11 +190,13 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
     ConnectivityManager mConnectivityManager;
 
     private DataBaseManager mDbHelper;
+    private Drawable mDrawable; 
 
     MenuItem mItem;
 
     Display mDisplay;
     DisplayMetrics mOutMetrics;
+    Bitmap mPlaceHolderBitmap = null;
     //float mDensity;
 
     ViewSwitcher mViewSwitcher;
@@ -155,6 +206,20 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
     private String mShowToastMsg = "Ooops! You may see incorrect or inconsistent results. For more details click 'info' menu item";
     private boolean bShowToastMsg = true;
     private boolean mOOMAlready = false;
+    
+    private static void setDefaultUncaughtExceptionHandler() {
+        try {
+            Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+
+                @Override
+                public void uncaughtException(Thread t, Throwable e) {
+                    Log.d("Uncaught Exception","Uncaught Exception detected in thread {} " + t + " " + e);
+                }
+            });
+        } catch (SecurityException e) {
+        	Log.d("Uncaught Exception","Could not set the Default Uncaught Exception Handler", e);
+        }
+    }
 
     private Handler mHandler = new Handler(Looper.getMainLooper()) {
             public void handleMessage (Message msg) {
@@ -167,6 +232,50 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
                  }
             }
      };
+     
+     public abstract class DoubleClickOnItemListener implements OnItemClickListener {
+
+    	    private static final long DOUBLE_CLICK_TIME_DELTA = 300;//milliseconds
+    	    private static final int SEND_SINGLE_CLICK_EVT = 1;//milliseconds
+
+    	    long lastClickTime = 0;
+    	    private Handler handler = new Handler() {
+    	        public void handleMessage (Message msg) {
+    	            switch (msg.what) {
+    	                case SEND_SINGLE_CLICK_EVT:
+    	                	Bundle b = msg.getData();
+    	                    int position = b.getInt("position");
+    	                    onSingleItemClick(position);
+    	                    break;
+    	                default:
+    	                	removeMessages(SEND_SINGLE_CLICK_EVT);
+    	                    break;
+    	            }
+    	        }
+    	    };
+    	    
+            public void onItemClick(AdapterView<?> parent,
+                                    View v, int position, long id) {
+    	        long clickTime = System.currentTimeMillis();
+    	        if (clickTime - lastClickTime < DOUBLE_CLICK_TIME_DELTA){
+    	        	onDoubleItemClick(parent,v,position, id);
+    	        	handler.removeMessages(SEND_SINGLE_CLICK_EVT);
+    	        } else {
+    	        	handler.removeMessages(SEND_SINGLE_CLICK_EVT);
+                    Message msg = new Message();
+                    Bundle b = new Bundle();
+                    b.putInt("position",position);
+                    msg.setData(b);
+                    msg.what = SEND_SINGLE_CLICK_EVT;
+                    handler.sendMessageDelayed(msg, DOUBLE_CLICK_TIME_DELTA);
+    	        }
+    	        lastClickTime = clickTime;
+            }
+
+    	    public abstract void onSingleItemClick(int position);
+    	    public abstract void onDoubleItemClick(AdapterView<?> parent,
+    	                                            View v, int position, long id);
+    }
 
      public static int getBitmapSize(BitmapDrawable value) {
          Bitmap bitmap = value.getBitmap();
@@ -174,7 +283,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
          // From KitKat onward use getAllocationByteCount() as allocated bytes can potentially be
          // larger than bitmap byte count.
          if (Utils.hasKitKat() &&  bitmap != null && !bitmap.isRecycled()) {
-             return bitmap.getAllocationByteCount();
+            // return bitmap.getAllocationByteCount();
          }
 
          if (Utils.hasHoneycombMR1()) {
@@ -193,13 +302,17 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
         mActBar = getActionBar();
 
         memClass = ((ActivityManager) this.getSystemService( Context.ACTIVITY_SERVICE )).getMemoryClass();
-        cacheSize = (1024 *  1024 * memClass) / 8;
+        cacheSize = 10 * 1024 * 1024;//(1024 *  1024 * memClass) / 8;
 
         Intent intent = getIntent();
         String filter = intent.getExtras().getString("filter");
         if (filter != null)
             mUserFilter = filter;
-        mAnalyzer = new UserFilterAnalyzer(this, filter);
+        pictureIds = intent.getIntArrayExtra("PictIDArray");
+        if((pictureIds != null && pictureIds.length > 0) && mUserFilter == "") {
+        	bMatchPictureIDsOnly = true;
+        }
+        mAnalyzer = new UserFilterAnalyzer(this, mUserFilter);
         mPairRange = mAnalyzer.getDateRange(mUserFilter);
         String title = getTitleFromPair(mPairRange);
         mMatchState = mAnalyzer.getMatchState();
@@ -220,6 +333,106 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
         mViewSwitcher.setBackgroundColor(Color.DKGRAY);
 
         setupViews();
+        
+        mEditTextCustomTag = (EditText) findViewById(R.id.editTextCustomTag);
+        mImgButtonAccept = (ImageButton) findViewById(R.id.customTagAccept);
+        mImgButtonCancel = (ImageButton) findViewById(R.id.customTagCancel);
+        
+        mEditTextCustomTag.setOnTouchListener(new View.OnTouchListener(){
+            public boolean onTouch(View view, MotionEvent motionEvent) {
+                //mHandler.removeMessages(SHOW_GRID_AFTER_DELAY);
+                //mProgress.setVisibility(View.GONE);
+                return false;
+           }
+        });
+        mEditTextCustomTag.addTextChangedListener(new TextWatcher(){
+            public void afterTextChanged(Editable s) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after){}
+            public void onTextChanged(CharSequence s, int start, int before, int count){
+                if(s.length() > 0) {
+                	mImgButtonAccept.setVisibility(View.VISIBLE);
+                	mImgButtonCancel.setVisibility(View.VISIBLE);
+                } else {
+                	mImgButtonAccept.setVisibility(View.GONE);
+                	mImgButtonCancel.setVisibility(View.GONE);
+                }
+            }
+        });
+        
+        mImgButtonAccept.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                Runnable runnable = new Runnable() {
+        	        public void run() {     	
+        	        	String customtag = mEditTextCustomTag.getText().toString();
+                    	if (customtag == null || customtag == "")
+                    		return;
+                    	if (mImageUris.size() == 0)
+                    		return;
+                    	for (int i = 0; i < mImageUris.size(); i++) {
+                    		ExifInterface intf = null;
+                            String path = mImageUris.get(i).getPath();//mImageUris.get(i).toString();
+                            
+                            try {
+                                intf = new ExifInterface(path);
+                            } catch(IOException e) {
+                                e.printStackTrace();
+                            }
+
+                            if(intf == null) {
+                                return;
+                            }
+                            intf.setAttribute("UserTag", customtag);
+                            
+                            Log.d(TAG, "xxxx PATH : " + path + " customtag - " + customtag );
+                            
+                    	
+                            try {
+        						intf.saveAttributes();
+        						//mDisplayImages.setChoiceMode(GridView.CHOICE_MODE_NONE);
+        					} catch (IOException e) {
+        						// TODO Auto-generated catch block
+        						e.printStackTrace();
+        					}
+                    	}
+        	        }
+              };
+              Thread mythread = new Thread(runnable);
+        	  mythread.start();
+            	/*String customtag = mEditTextCustomTag.getText().toString();
+            	if (customtag == null || customtag == "")
+            		return;
+            	if (mList.size() == 0)
+            		return;
+            	for (int i = 0; i < mList.size(); i++) {
+            		ExifInterface intf = null;
+                    String path = mList.get(i).toString();
+                    try {
+                        intf = new ExifInterface(path);
+                    } catch(IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    if(intf == null) {
+                        return;
+                    }
+                    intf.setAttribute("UserTag", customtag);
+                    
+            	
+                    try {
+						intf.saveAttributes();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+            	}*/
+            }
+        });
+        
+        mImgButtonCancel.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+
+            }
+        });
 
         if (mDbHelper.getState() == DataBaseManager.SyncState.SYNC_STATE_COMPLETED) {
             mUserFilterContainsAPLACES = mDbHelper.retreiveAllPlacesFromStringIfExists(mUserFilter);
@@ -227,6 +440,27 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
             TextView txtView = (TextView) mViewSwitcher.findViewById(R.id.displayViewProgressTextView);
             txtView.setText("Please wait, Loading pictures may take a while! Background Sync is still in-progress");
         }
+        
+        mDrawable = getResources().getDrawable(R.drawable.bggrid);
+        
+        mImageAdapter = new GridImageAdapter(this);
+        
+        mPlaceHolderBitmap= BitmapFactory.decodeResource(this.getResources(),  R.drawable.empty_photo);
+        setDefaultUncaughtExceptionHandler();
+        
+        mDisplayImages.setOnScrollListener(new OnScrollListener(){
+			@Override
+			public void onScroll(AbsListView view, int firstVisibleItem,
+					int visibleItemCount, int totalItemCount) {
+				// TODO Auto-generated method stub
+				//Log.d(TAG, "OnScroll - firstVisibleItem : " + firstVisibleItem + " visibleItemCount : " + visibleItemCount + " totalItemCount :" + totalItemCount);
+			}
+
+			@Override
+			public void onScrollStateChanged(AbsListView view, int scrollState) {
+				// TODO Auto-generated method stub
+			}
+        });
     }
 
     /*private void updayeWarningMenuItem() {
@@ -364,20 +598,125 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
         mDisplayImages.setChoiceMode(GridView.CHOICE_MODE_MULTIPLE_MODAL);
         mDisplayImages.setMultiChoiceModeListener(new MultiChoiceModeListener());
         mDisplayImages.setDrawSelectorOnTop(true);
-        mDisplayImages.setOnItemClickListener(new OnItemClickListener() {
-            public void onItemClick(AdapterView<?> parent,
-            View v, int position, long id)
-            {
-                /*Toast.makeText(getBaseContext(),
-                        "pic" + (position + 1) + " selected",
-                        Toast.LENGTH_SHORT).show();*/
-                Intent intent = new Intent();
+        
+        mDisplayImages.setOnItemClickListener(new DoubleClickOnItemListener() {
+			@Override
+			public void onSingleItemClick(int position) {
+				Intent intent = new Intent();
                 intent.setAction(Intent.ACTION_VIEW);
                 Uri imageUri = Uri.parse("file://" + mList.get(position));
                 intent.setDataAndType(imageUri, "image/*");
                 startActivity(intent);
-            }
+			}
+
+			@Override
+			public void onDoubleItemClick(AdapterView<?> parent, final View v,
+					                      int position, long id) {
+				ExifInterface intf = null;
+				if (mList.size() == 0 || mList == null)
+					return;
+                String path = mList.get(position);
+                Log.d(TAG, "path " + path);
+                if (path == null || path == "")
+                	return;
+                try {
+                    intf = new ExifInterface(path);
+                } catch(IOException e) {
+                    e.printStackTrace();
+                }
+
+                if(intf == null) {
+                    return;
+                }
+                String tag = intf.getAttribute("UserTag");
+                
+                Log.d(TAG, "xxxx PATH : " + path + " tag - " + tag );
+                
+               
+                CustomViewFlipper flipper = (CustomViewFlipper) v; 
+                /*if (flipper.getDisplayedChild() == 0) {
+                	//flipper.setOutAnimation(AnimationUtils.loadAnimation(v.getContext(), R.anim.left_in));
+                	//flipper.setInAnimation(AnimationUtils.loadAnimation(v.getContext(), R.anim.left_out));
+                	AnimatorSet set = new AnimatorSet(); //(AnimatorSet) AnimatorInflater.loadAnimator(v.getContext(),R.anim.left_in);
+                	
+                	set.playSequentially(   AnimatorInflater.loadAnimator(v.getContext(),R.animator.right_in),
+				                			AnimatorInflater.loadAnimator(v.getContext(),R.animator.right_out),
+				                			AnimatorInflater.loadAnimator(v.getContext(),R.animator.left_in),
+				                			AnimatorInflater.loadAnimator(v.getContext(),R.animator.left_out));
+                    set.setTarget(flipper);
+                	set.start();
+                } else {
+                	AnimatorSet set = new AnimatorSet();
+                	set.playSequentially(   AnimatorInflater.loadAnimator(v.getContext(),R.animator.right_in),
+                			AnimatorInflater.loadAnimator(v.getContext(),R.animator.right_out),
+                			AnimatorInflater.loadAnimator(v.getContext(),R.animator.left_in),
+                			AnimatorInflater.loadAnimator(v.getContext(),R.animator.left_out));
+                    set.setTarget(flipper);
+                	set.start();
+                }*/
+                /*AnimatorSet set ;
+                if (flipper.getDisplayedChild() == 0) {
+                    set = (AnimatorSet) AnimatorInflater.loadAnimator(v.getContext(),R.animator.flip_right);
+
+                	
+                } else {
+                	set = (AnimatorSet) AnimatorInflater.loadAnimator(v.getContext(),R.animator.flip_left);
+                }
+            	set.setTarget(flipper);
+            	set.start();
+                flipper.showNext();*/
+                //flipper.setOutAnimation(null);
+                //flipper.setInAnimation(null);
+                ObjectAnimator animation;
+                if (flipper.getDisplayedChild() == 0) {
+                	animation = ObjectAnimator.ofFloat(v, "rotationY", 0.0f, 180.0f);
+            		animation.setRepeatCount(0);
+            		animation.setInterpolator(new AccelerateDecelerateInterpolator());
+                } else {
+                    animation = ObjectAnimator.ofFloat(v, "rotationY",  180f, 0.0f);
+            		animation.setRepeatCount(0);
+            		animation.setInterpolator(new AccelerateDecelerateInterpolator());
+            		
+                }
+                animation.addUpdateListener(new AnimatorUpdateListener() {
+					@Override
+					public void onAnimationUpdate(ValueAnimator animation) {
+						// TODO Auto-generated method stub
+						float val = animation.getAnimatedFraction();
+						if (val >= 0.5 ) {
+							 CustomViewFlipper flipper = (CustomViewFlipper) v;
+							 flipper.setDisplayedChild(1);
+							 if (flipper.getDisplayedChild() == 1) {
+								 //flipper.getCurrentView().setRotationY(180);
+							 }
+							 animation.removeAllUpdateListeners();
+							 
+						}
+					}
+                	
+                });
+                
+                animation.setDuration(1000);
+                animation.start();
+                
+                TextView tv = (TextView) ((ViewFlipper) v).getChildAt(1);                
+                if (tag == ""  || tag == null) {
+                	tv.setText("No Tags Yet!");
+                }                
+			}
         });
+        
+        /*mDisplayImages.setOnItemLongClickListener(new OnItemLongClickListener() {
+			@Override
+			public boolean onItemLongClick(AdapterView<?> arg0, View arg1,
+					int arg2, long arg3) {
+				// TODO Auto-generated method stub
+				Toast.makeText(getBaseContext(),
+                        "pic" + (10 + 1) + " selected",
+                        Toast.LENGTH_SHORT).show();
+				return true;
+			}
+        });*/
     }
 
     @Override
@@ -409,8 +748,8 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
             mGridCount = data.getCount();
             setupCursor(data);
 
-            new LoadImagesInBackGround(this.getApplication(), data).execute();
-            mImageAdapter = new GridImageAdapter(this.getApplication());
+            new LoadImagesInBackGround(getParent(), data).execute();
+           
             mDisplayImages.setAdapter(mImageAdapter);
         } else {
             //imagePath = imageUri.getPath();
@@ -444,6 +783,8 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
             getMenuInflater().inflate(R.menu.menu_display_view, menu);
             MenuItem item = menu.findItem(R.id.menu_item_pick_all);
             item.setVisible(true);
+            MenuItem item1 = menu.findItem(R.id.slideshow);
+            item1.setVisible(true);
         }
         if (mShowWarningMenuItem != null) {
             getMenuInflater().inflate(R.menu.menu_main, menu);
@@ -468,6 +809,17 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
                 mesg.what = SELECT_ALL_ITEMS;
                 mHandler.sendMessageDelayed(mesg, 100);
                 return true;
+            case R.id.slideshow:
+            	Intent intent = new Intent(getBaseContext(), SlideShowActivity.class);
+            	ArrayList<Uri> slideShowURIs = new ArrayList<Uri>();
+            	for (int index = 0; index < mList.size(); index++) {
+                        Uri imageUri = Uri.parse("file://" + mList.get(index));
+                        slideShowURIs.add(imageUri);
+                    
+                }
+            	intent.putParcelableArrayListExtra("uriList", slideShowURIs);
+                startActivity(intent);
+            	break;
             case android.R.id.home:
                 onBackPressed();
                 break;
@@ -521,7 +873,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
                 mImageUris.clear();
                 for (int index = 0; index < checkedItems.size(); index++) {
                     int position = checkedItems.keyAt(index);
-                    if(position <= mList.size() && checkedItems.valueAt(index)) {
+                    if(position < mList.size() && checkedItems.valueAt(index)) {
                         Uri imageUri = Uri.parse("file://" + mList.get(position));
                         mImageUris.add(imageUri);
                     }
@@ -582,6 +934,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
 
         public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
             //mState = SelectState.CHERRY_PICK;
+        	mEditTextCustomTag.setVisibility(View.VISIBLE);
             return true;
         }
 
@@ -590,6 +943,9 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
         }
 
         public void onDestroyActionMode(ActionMode mode) {
+        	mEditTextCustomTag.setVisibility(View.GONE);
+        	mImgButtonAccept.setVisibility(View.GONE);
+        	mImgButtonCancel.setVisibility(View.GONE);
             setShareIntent(null);
             mItem.setEnabled(false);
             mState = SelectState.NONE;
@@ -625,10 +981,18 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
             }
         }
     }
+    
+    
     /**
      * Adapter for our image files.
      *
      */
+    static class ViewHolder {
+  	  RecyclingImageView imageView ;
+  	  TextView textView ;
+  	  int position;
+  	}
+    
     class GridImageAdapter extends BaseAdapter {
         private Context mContext;
         private Resources mResources = null;
@@ -645,8 +1009,11 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
                     // that it has been added into the memory cache
                     ((RecyclingBitmapDrawable) value).setIsCached(true);
                 }
-                if (getBitmapFromMemCache(data) == null)
+                if (getBitmapFromMemCache(data) == null) {
                     mMemoryCache.put(data, value);
+                    //Log.d(TAG, "mMemoryCache.put Count - " + mMemoryCache.putCount());
+                }
+                //Log.d(TAG, "xxxx MemoryCache size " + mMemoryCache.size());
             }
         }
 
@@ -654,6 +1021,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
             BitmapDrawable memValue = null;
             if (mMemoryCache != null) {
                 memValue = mMemoryCache.get(data);
+                //Log.d(TAG, "mMemoryCache.put Count - " + mMemoryCache.putCount());
             }
 
             return memValue;
@@ -666,14 +1034,24 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
             }
         }
 
-        public GridImageAdapter(Application application) {
+        public GridImageAdapter(Context application) {
             super();
             mContext = application;
             mResources = mContext.getResources();
             mMemoryCache = new LruCache<String, BitmapDrawable>(cacheSize) {
                 protected int sizeOf(String key, BitmapDrawable value) {
-                    final int bitmapSize = getBitmapSize(value) / 1024;
-                    return bitmapSize == 0 ? 1 : bitmapSize;
+                    //final int bitmapSize = getBitmapSize(value) / 1024;
+                    //return bitmapSize == 0 ? 1 : bitmapSize;
+                	
+                	//return 1;//value.getBitmap().getByteCount();
+                	
+                	// The cache size will be measured in kilobytes rather than
+                    // number of items.
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR1) {
+                        return value.getBitmap().getByteCount() ;
+                    } else {
+                        return value.getBitmap().getRowBytes() * value.getBitmap().getHeight();
+                    }
                 }
 
 
@@ -696,7 +1074,9 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
             int val = mMemoryCache.putCount();
             BitmapDrawable drawable = null;
             drawable = new RecyclingBitmapDrawable(mResources, photo);
-            addBitmapToCache(val+"", drawable);
+            //Log.d(TAG, "Adding LRU PHOTO @ POS " + val);
+            if (val < mList.size())
+              addBitmapToCache(val+"", drawable);
         }
 
         public int getCount() {
@@ -714,35 +1094,61 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
         }
 
         public View getView(int position, View convertView, ViewGroup parent) {
-            ImageView imageView ;
-            //CheckableLayout l;
+            ViewHolder viewHolder;
             if (convertView == null) {
-                //l = new CheckableLayout(mContext);
-                imageView = new RecyclingImageView(mContext);
-                //imageView.setLayoutParams(new GridView.LayoutParams(240, 240));
-                imageView.setPadding(4, 4, 4, 4);
-                //imageView = new ImageView(mContext);
-                //l.addView(imageView);
+            	// inflate the layout
+            	convertView = LayoutInflater.from(mContext).inflate(R.layout.item_flipperdisplaygridview, null);
+            	viewHolder = new ViewHolder();
+            	
+            	viewHolder.imageView = (RecyclingImageView) convertView.findViewById(R.id.imgView);
+            	viewHolder.textView = (TextView) convertView.findViewById(R.id.textView);
+                viewHolder.imageView.setPadding(4, 4, 4, 4);
+                convertView.setTag(viewHolder);
+
             } else {
-                //l = (CheckableLayout) convertView;
-                //imageView = (RecyclingImageView) l.getChildAt(0);
-                imageView = (ImageView) convertView;
-            }
-            //imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            BitmapDrawable drawable = getBitmapFromMemCache(position+"");
-            if (drawable!= null && !drawable.getBitmap().isRecycled()) {
-               imageView.setImageDrawable(drawable);
-            }
-            if (drawable == null) {
-                    BitmapWorkerTask task = new BitmapWorkerTask(imageView);
-                    task.execute(position+"");
+            	viewHolder = (ViewHolder) convertView.getTag();
+            	if (((CustomViewFlipper)convertView).getDisplayedChild() == 1) {
+            		((CustomViewFlipper)convertView).setInAnimation(null);
+            		((CustomViewFlipper)convertView).setOutAnimation(null);
+            	    //((CustomViewFlipper)convertView).showNext();
+            	} else if (((CustomViewFlipper)convertView).getDisplayedChild() == 0){
+            		((CustomViewFlipper)convertView).stopFlipping();
+            	}
+            	//Log.d(TAG, "((CustomViewFlipper)convertView).getCurrentView().getRotationY() : " + ((CustomViewFlipper)convertView).getCurrentView().getRotationY());
+            	if (((CustomViewFlipper)convertView).getCurrentView().getRotationY() == 180.0 ) {
+            		((CustomViewFlipper)convertView).getCurrentView().setRotationY(0);
+            	}
 
             }
+            viewHolder.textView.setBackground(mDrawable);
+            viewHolder.position = position;
+            viewHolder.textView.setText(position+"");
+            //mMemoryCache.trimToSize(50);
+            BitmapDrawable drawable = getBitmapFromMemCache(position+"");
+            if (drawable!= null && !drawable.getBitmap().isRecycled()) {
+            	if (((CustomViewFlipper)convertView).getDisplayedChild() != 0) {
+            		((CustomViewFlipper)convertView).setDisplayedChild(0);
+            	}
+            	viewHolder.imageView.setImageDrawable(drawable);
+            } else {
+            	mScrollTo = mDisplayImages.getFirstVisiblePosition();
+            	            	//Log.d(TAG, "NOt Quite Returning from this point mScrollTo : " + mScrollTo + "position - " + position + " Last position " + mDisplayImages.getLastVisiblePosition());
+            	if (cancelPotentialWork(position, viewHolder.imageView)) {
+            	  BitmapWorkerTask task = new BitmapWorkerTask(viewHolder.imageView, position);
+            	  final AsyncDrawable asyncDrawable =
+                          new AsyncDrawable(getResources(), mPlaceHolderBitmap, task);
+            	  viewHolder.imageView.setImageDrawable(asyncDrawable);
+            	  //task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, position+"");
+            	  task.execute(position+"");
+            	  
+            	}
+            }
             mScrollTo = mDisplayImages.getFirstVisiblePosition();
-             return imageView;
+            return convertView;
         }
     }
 
+    
     /**
      * Add image(s) to the grid view adapter.
      *
@@ -752,6 +1158,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
         for (Bitmap image : value) {
             //mImageAdapter.addPhoto(image);
             mImageAdapter.addLRUPhoto(image);
+            //Log.d(TAG, "addGridImage --> addLRUPhoto");
         }
         mImageAdapter.notifyDataSetChanged();
     }
@@ -759,6 +1166,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
     boolean addtoListIfNotFound(String path) {
         if (!mList.contains(path)) {
              mList.add(path);
+             //Log.d(TAG, "Path : " + path + " already found!");
              return true;
          }
 
@@ -778,34 +1186,193 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
          return false;
      }
 
+    public static boolean cancelPotentialWork(int data, ImageView imageView) {
+        final BitmapWorkerTask bitmapWorkerTask = getBitmapWorkerTask(imageView);
+
+        if (bitmapWorkerTask != null) {
+            final int bitmapData = bitmapWorkerTask.data;
+            // If bitmapData is not yet set or it differs from the new data
+            if (bitmapData == 0 || bitmapData != data) {
+                // Cancel previous task
+            	//Log.d("CHECKING!", " cancelPotentialWork - data : " + data);
+                bitmapWorkerTask.cancel(true);
+            } else {
+                // The same work is already in progress
+                return false;
+            }
+        }
+        // No task associated with the ImageView, or an existing task was cancelled
+        return true;
+    }
+    
+    private static BitmapWorkerTask getBitmapWorkerTask(ImageView imageView) {
+     if (imageView != null) {
+       final Drawable drawable = imageView.getDrawable();
+       if (drawable instanceof AsyncDrawable) {
+           final AsyncDrawable asyncDrawable = (AsyncDrawable) drawable;
+           return asyncDrawable.getBitmapWorkerTask();
+       }
+      }
+      return null;
+    }
+    static class AsyncDrawable extends BitmapDrawable {
+        private final WeakReference<BitmapWorkerTask> bitmapWorkerTaskReference;
+
+        public AsyncDrawable(Resources res, Bitmap bitmap,
+                BitmapWorkerTask bitmapWorkerTask) {
+            super(res, bitmap);
+            bitmapWorkerTaskReference =
+                new WeakReference<BitmapWorkerTask>(bitmapWorkerTask);
+        }
+
+        public BitmapWorkerTask getBitmapWorkerTask() {
+            return bitmapWorkerTaskReference.get();
+        }
+    }
+    
     class BitmapWorkerTask extends AsyncTask<String, Void, Bitmap>{
            private final WeakReference<ImageView> imageViewReference;
-           public BitmapWorkerTask(ImageView imageView) {
+           private int data = 0;
+           boolean show = true;
+           int position = -1;
+           //CustomViewFlipper flipper;
+           public BitmapWorkerTask(ImageView imageView, int position) {
             // Use a WeakReference to ensure the ImageView can be garbage collected
             imageViewReference = new WeakReference<ImageView>(imageView);
+            //this.flipper = flipper;
+            //this.flipper.setDisplayedChild(2);
+            this.position = position;
            }
 
            @Override
+	        protected void onPreExecute() {
+	        	// TODO Auto-generated method stub
+	        	super.onPreExecute();
+	        	if( Math.abs(mScrollTo-position) > 20) {
+	            	   Log.d(TAG, "1. CANCEL this task - mScrollTo : " + mScrollTo + " position : " + position);
+	        		cancel(true);
+	        		//imageViewReference.clear();
+	        	}
+	        }
+           @Override
            protected Bitmap doInBackground(String... params) {
-               int index = mList.indexOf(String.valueOf(params[0]));
-               if (index != -1 ) return null;
-            final Bitmap bitmap = getPicture(mList.get(index));
-            mImageAdapter.addLRUPhoto(bitmap);
-            return bitmap;
+               int index = -1; //mList.indexOf(String.valueOf(params[0]));
+               
+               try {
+            	   index = Integer.parseInt(String.valueOf(params[0]));
+            	} catch(NumberFormatException nfe) {
+            		Log.d(TAG, "Ooops ! Error ");
+            	} 
+        	   //int index = -1;
+               if( Math.abs(mScrollTo-position) > 20) {
+            	   Log.d(TAG, "1. CANCEL this task - mScrollTo : " + mScrollTo + " position : " + position);
+	        		cancel(true);
+	        		return null;
+	        		//imageViewReference.clear();
+	        	}
+        	   
+               if (index == -1 || index > mList.size()) {// (Math.abs(mScrollTo-index) > 20) ) {
+            	   //flipper.setDisplayedChild(0);
+            	   Log.d(TAG, "2. CANCEL this task - index is -1 ? : " + index);
+
+            	   cancel(true);
+            	   return null;
+               }
+               
+               Log.d(TAG, "In BitmapWorkerTask Current POS :  " + mScrollTo + " - This task position : " + position + " - This Index position : " + index + " Math.abs(mScrollTo-position)  - " + Math.abs(mScrollTo-position));
+               final Bitmap bitmap = getPicture(mList.get(index));
+               //Log.d(TAG, "From BitmapWorkerTask --> AddLruPPhoto @ pos " + index + " bitmap  - " + bitmap);
+               if( Math.abs(mScrollTo-position) < 20) {
+                 mImageAdapter.addLRUPhoto(bitmap);
+               }
+               return bitmap;
            }
 
            @Override
            protected void onPostExecute(Bitmap bitmap) {
+        	   if( Math.abs(mScrollTo-position) > 20) {
+            	   Log.d(TAG, "3. CANCEL this task - mScrollTo : " + mScrollTo + " position : " + position);
+        		   cancel(true);
+        	   }
+        	   if (isCancelled()) {
+        		   //flipper.setDisplayedChild(0);
+                   bitmap = null;
+               }
+
             if (imageViewReference != null && bitmap != null) {
              final ImageView imageView = (ImageView)imageViewReference.get();
-             if (imageView != null) {
+             final BitmapWorkerTask bitmapWorkerTask =
+                     getBitmapWorkerTask(imageView);
+             if (this == bitmapWorkerTask && imageView != null) {
+            	 //flipper.setDisplayedChild(0);
               imageView.setImageBitmap(bitmap);
+              //mImageAdapter.notifyDataSetChanged();
              // mDisplayImages.
              }
             }
            }
           }
 
+    private int dpToPx(int dp)
+    {
+        float density = getApplicationContext().getResources().getDisplayMetrics().density;
+        return Math.round((float)dp * density);
+    }
+    
+    Bitmap scaleDownLargeImageWithAspectRatio(Bitmap image)
+    {
+        int imaheVerticalAspectRatio,imageHorizontalAspectRatio;
+        float bestFitScalingFactor=0;
+        float percesionValue=(float) 0.2;
+
+        //getAspect Ratio of Image
+        int imageHeight=(int) (Math.ceil((double) image.getHeight()/100)*100);
+        int imageWidth=(int) (Math.ceil((double) image.getWidth()/100)*100);
+        int GCD=BigInteger.valueOf(imageHeight).gcd(BigInteger.valueOf(imageWidth)).intValue();
+        imaheVerticalAspectRatio=imageHeight/GCD;
+        imageHorizontalAspectRatio=imageWidth/GCD;
+        Log.i("scaleDownLargeImageWIthAspectRatio","Image Dimensions(W:H): "+imageWidth+":"+imageHeight);
+        Log.i("scaleDownLargeImageWIthAspectRatio","Image AspectRatio(W:H): "+imageHorizontalAspectRatio+":"+imaheVerticalAspectRatio);
+
+        //getContainer Dimensions
+        //int displayWidth = getWindowManager().getDefaultDisplay().getWidth();
+        //int displayHeight = getWindowManager().getDefaultDisplay().getHeight();
+        int displayWidth = mOutMetrics.heightPixels ;
+        int displayHeight  = mOutMetrics.widthPixels ;
+       //I wanted to show the image to fit the entire device, as a best case. So my ccontainer dimensions were displayWidth & displayHeight. For your case, you will need to fetch container dimensions at run time or you can pass static values to these two parameters 
+
+        int leftMargin = 0;
+        int rightMargin = 0;
+        int topMargin = 0;
+        int bottomMargin = 0;
+        int containerWidth = displayWidth - (leftMargin + rightMargin);
+        int containerHeight = displayHeight - (topMargin + bottomMargin);
+        Log.i("scaleDownLargeImageWIthAspectRatio","Container dimensions(W:H): "+containerWidth+":"+containerHeight);
+
+        //iterate to get bestFitScaleFactor per constraints
+        while((imageHorizontalAspectRatio*bestFitScalingFactor <= containerWidth) && 
+                (imaheVerticalAspectRatio*bestFitScalingFactor<= containerHeight))
+        {
+            bestFitScalingFactor+=percesionValue;
+        }
+
+        //return bestFit bitmap
+        int bestFitHeight=(int) (imaheVerticalAspectRatio*bestFitScalingFactor);
+        int bestFitWidth=(int) (imageHorizontalAspectRatio*bestFitScalingFactor);
+        Log.i("scaleDownLargeImageWIthAspectRatio","bestFitScalingFactor: "+bestFitScalingFactor);
+        Log.i("scaleDownLargeImageWIthAspectRatio","bestFitOutPutDimesions(W:H): "+bestFitWidth+":"+bestFitHeight);
+        image=Bitmap.createScaledBitmap(image, bestFitWidth,bestFitHeight, true);
+
+        //Position the bitmap centre of the container
+        int leftPadding=(containerWidth-image.getWidth())/2;
+        int topPadding=(containerHeight-image.getHeight())/2;
+        Bitmap backDrop=Bitmap.createBitmap(containerWidth, containerHeight, Bitmap.Config.RGB_565);
+        Canvas can = new Canvas(backDrop);
+        can.drawBitmap(image, leftPadding, topPadding, null);
+
+        return backDrop;
+    }
+    
     Bitmap getPicture(String path) {
         ExifInterface intf = null;
         Bitmap bitmap = null;
@@ -814,6 +1381,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
         if (path == null) {
           return null;
         }
+        //Log.d(TAG,"xxxxx path - " + path);
         try {
             intf = new ExifInterface(path);
         } catch(IOException e) {
@@ -829,7 +1397,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
         int width=(int) (dpWidth);
         int height=(int) (dpHeight);
         if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE ) {
-            width = height;
+            //width = height;
         }
         if (intf.hasThumbnail() ) {
            byte[] thumbnail = intf.getThumbnail();
@@ -837,13 +1405,24 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
            options.inJustDecodeBounds = true;
            BitmapFactory.decodeByteArray(thumbnail,0,thumbnail.length,options);
 
-           // Calculate inSampleSize
-           options.inSampleSize = calculateInSampleSize(options, width, width);
+           int bounding = dpToPx(250);
+           float xScale = ((float) bounding) / width;
+           float yScale = ((float) bounding) / height;
+           float scale = (xScale <= yScale) ? xScale : yScale;
+           
+           //Matrix matrix = new Matrix();
+          // matrix.postScale(scale, scale);
+           
+          /// Calculate inSampleSize
+           options.inSampleSize = calculateInSampleSize(options, 100, 100);
            // Decode bitmap with inSampleSize set
            options.inJustDecodeBounds = false;
+           //options.inSampleSize = 8;
            bitmap = BitmapFactory.decodeByteArray(thumbnail, 0, thumbnail.length, options);
-           if (bitmap != null) {
-               newBitmap = Bitmap.createScaledBitmap(bitmap, width, width, true);
+           //newBitmap = scaleDownLargeImageWithAspectRatio(bitmap);
+           /*if (bitmap != null) {
+               //newBitmap = Bitmap.createScaledBitmap(bitmap, width, width, true);
+        	   newBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
                if (newBitmap!= bitmap){
                    bitmap.recycle();
                    bitmap = null;
@@ -851,7 +1430,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
                if (newBitmap != null) {
                    return newBitmap;
                }
-           }
+           }*/
            return bitmap;
         } else  {
            Uri imageUri = null;
@@ -863,7 +1442,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
                BitmapFactory.decodeStream(getContentResolver().openInputStream(imageUri), null,options);
 
                // Calculate inSampleSize
-               options.inSampleSize = calculateInSampleSize(options, width, width);
+               options.inSampleSize = calculateInSampleSize(options, 100, 100);
 
                // Decode bitmap with inSampleSize set
                options.inJustDecodeBounds = false;
@@ -934,7 +1513,7 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
         private Cursor mCursor;
         private Context mContext;
 
-        LoadImagesInBackGround(Application application, Cursor cur) {
+        LoadImagesInBackGround(Context application, Cursor cur) {
             mCursor = cur;
             mContext = application;
         }
@@ -946,9 +1525,14 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
            // when task is cancelled. The thread that just got cancelled (as a result of configuration changes)
            // still latches onto old cursor object
             do {
+            	Bitmap bmp = null;
                 if (mCursor.isClosed() || isCancelled())
                     return null;
-                Bitmap bmp = getImgBasedOnUserFilter(mCursor);
+                if (bMatchPictureIDsOnly) {
+                    bmp = getImgBasedOnPictureIDs(mCursor);
+                } else {
+                  bmp = getImgBasedOnUserFilter(mCursor);
+                }
                 if (bmp != null) {
                     //for (int i = 0; i < 50; i++)
                         publishProgress(bmp);
@@ -1002,6 +1586,77 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
         protected void onCancelled(Object result) {
 
         }
+        
+        Bitmap getImgBasedOnPictureIDs(Cursor cur) {
+            boolean added = false;
+            boolean found = false;
+            String path   = null;
+            Integer pictId = -1;
+            if (!bMatchPictureIDsOnly)
+            	return null;
+            do {
+                if (cur.isClosed()) break;
+                if (id != -1) {
+                	pictId = cur.getInt(id);
+                }
+                for (int i = 0; i < pictureIds.length; i ++) {
+                	if (pictId == pictureIds[i]) {
+                		found = true;
+                		break;
+                	} 
+                }
+            } while(false);
+            
+                if (dataColumn != -1 && found) {
+                  path = cur.getString(dataColumn);
+                  added = true;
+                }
+                
+                if (added) {
+                    addtoListIfNotFound(path);
+                    if (mShowGrid == false && mList.size() == 1) {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                // Show the grid view and turn on indeterminate dialog in title region
+                                mViewSwitcher.showNext();
+                                mShowGrid = true;
+                                setProgressBarIndeterminateVisibility(true);
+                                invalidateOptionsMenu();
+                            }
+                        });
+                    }
+                    try {
+                        return getPicture(path);
+                    } catch (OutOfMemoryError e) {
+                        if (!mOOMAlready) {
+                            mShowWarningMenuItem = "ERROR: Sorry! Unable to display complete results due to memory issues.\n\n" +
+                                                   " This app is still in alpha stage! We will soon provide an update to address this issue. Apologies once again!";
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if (bShowToastMsg) {
+                                        Toast.makeText(getBaseContext(), mShowToastMsg, Toast.LENGTH_LONG).show();
+                                        bShowToastMsg = false;
+                                    }
+                                    invalidateOptionsMenu();
+                                }
+                            });
+                            mOOMAlready = true;
+                        }
+                        //Log.e("Map", "ResultsView - Out Of Memory Error " + e.getLocalizedMessage());
+                        /*try {
+                               android.os.Debug.dumpHprofData("/sdcard/dump.hprof");
+                             }
+                        catch (IOException e1) {
+                               e1.printStackTrace();
+                        }*/
+                    }
+
+                }
+           
+			return null;
+        }
 
         Bitmap getImgBasedOnUserFilter(Cursor cur) {
             boolean added = false;
@@ -1018,7 +1673,11 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
                 if (dataColumn != -1) {
                   path = cur.getString(dataColumn);
                 }
-
+                if (bMatchPictureIDsOnly) {
+                	//pictureIds
+                	break;
+                }
+                //Log.d(TAG,"xxxxx path - " + path);
                 if (curDate == null && curDate == null) break;
                 if (curDate != null)
                   dateinMilliSec = Long.parseLong(curDate);
@@ -1327,4 +1986,9 @@ private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, i
             return null;
         } // End of function
     } // End of LoadImagesInBackGround
+    
+ // The callback interface
+    interface ResultViewCallback {
+        void ResultsCallback();
+    }
 } // End of Main class

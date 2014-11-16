@@ -4,5 +4,7 @@
     <string name="app_name">SpickiT</string>
      <string name="Go">Good to go</string>
      <string name="done">done</string>
-
+     <string name="drawer_open">open</string>
+     <string name="drawer_close">close</string>
+     <string name="defaultText">Add a \'custom tag\' to the selected picture(s)</string>
 </resources>

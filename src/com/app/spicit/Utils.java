@@ -75,6 +75,6 @@ public class Utils {
     }
 
     public static boolean hasKitKat() {
-        return Build.VERSION.SDK_INT >= VERSION_CODES.KITKAT;
+        return true; //Build.VERSION.SDK_INT >= VERSION_CODES.;
     }
 }
