@@ -6,11 +6,11 @@
      android:showAsAction="always"
      android:visible="false"/>
    
-   <item android:id="@+id/slideshow"
+   <!-- <item android:id="@+id/slideshow"
        android:icon="@android:drawable/ic_media_next"
        android:title="info"
        android:showAsAction="always"
-       android:visible="false"/>
+       android:visible="false"/> -->
     
 
 </menu>

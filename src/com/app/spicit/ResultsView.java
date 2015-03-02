@@ -606,6 +606,8 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
                 intent.setAction(Intent.ACTION_VIEW);
                 Uri imageUri = Uri.parse("file://" + mList.get(position));
                 intent.setDataAndType(imageUri, "image/*");
+                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                //intent.setAction(Intent.ACTION_GET_CONTENT);
                 startActivity(intent);
 			}
 
@@ -783,8 +785,8 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
             getMenuInflater().inflate(R.menu.menu_display_view, menu);
             MenuItem item = menu.findItem(R.id.menu_item_pick_all);
             item.setVisible(true);
-            MenuItem item1 = menu.findItem(R.id.slideshow);
-            item1.setVisible(true);
+            //MenuItem item1 = menu.findItem(R.id.slideshow);
+            //item1.setVisible(true);
         }
         if (mShowWarningMenuItem != null) {
             getMenuInflater().inflate(R.menu.menu_main, menu);
@@ -809,7 +811,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
                 mesg.what = SELECT_ALL_ITEMS;
                 mHandler.sendMessageDelayed(mesg, 100);
                 return true;
-            case R.id.slideshow:
+            /*case R.id.slideshow:
             	Intent intent = new Intent(getBaseContext(), SlideShowActivity.class);
             	ArrayList<Uri> slideShowURIs = new ArrayList<Uri>();
             	for (int index = 0; index < mList.size(); index++) {
@@ -819,7 +821,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
                 }
             	intent.putParcelableArrayListExtra("uriList", slideShowURIs);
                 startActivity(intent);
-            	break;
+            	break;*/
             case android.R.id.home:
                 onBackPressed();
                 break;
@@ -879,6 +881,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
                     }
                 }
                 shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, mImageUris);
+                shareIntent.putExtra(Intent.EXTRA_TEXT, "---" + "\nShared from Spickit");
                 shareIntent.setType("image/jpeg");
                 return shareIntent;
             }
@@ -974,6 +977,7 @@ public class ResultsView extends Activity implements LoaderCallbacks<Cursor>, Lo
                 Intent shareIntent = new Intent();
                 shareIntent.setAction(Intent.ACTION_SEND_MULTIPLE);
                 shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, mImageUris);
+                shareIntent.putExtra(Intent.EXTRA_TEXT, "---" + "\nShared from Spickit");
                 shareIntent.setType("image/jpeg");
                 if (mShareActionProvider != null) {
                     mShareActionProvider.setShareIntent(shareIntent);
